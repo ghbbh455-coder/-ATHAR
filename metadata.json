@@ -1,0 +1,6 @@
+{
+  "name": "أثر | ATHAR",
+  "description": "تطبيق إسلامي يعرض آيات قرآنية وأحاديث نبوية صحيحة وأذكارًا موثقة، بهدف جعل استخدام الهاتف فرصة للتذكير بالله.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">أثر | ATHAR</string>
+    <string name="app_tagline">افتح هاتفك على ما ينفع قلبك</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_quran">القرآن الكريم</string>
+    <string name="nav_hadith">الحديث النبوي</string>
+    <string name="nav_adhkar">الأذكار</string>
+    <string name="nav_favorites">المفضلة</string>
+    <string name="nav_settings">الإعدادات</string>
+</resources>
