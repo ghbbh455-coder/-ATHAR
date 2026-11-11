@@ -32,8 +32,8 @@ class UnlockBroadcastReceiver : BroadcastReceiver() {
             }
             Intent.ACTION_USER_PRESENT -> {
                 if (isEnabled && UnlockOverlayManager.canDrawOverlays(context)) {
-                    // Ensures the overlay service is started/active upon unlock
-                    UnlockOverlayService.startService(context)
+                    // Ensures the overlay service is started and triggers reminder immediately
+                    UnlockOverlayService.startService(context, triggerNow = true)
                 }
                 // Refresh widget upon unlock
                 CoroutineScope(Dispatchers.IO).launch {
@@ -44,7 +44,7 @@ class UnlockBroadcastReceiver : BroadcastReceiver() {
                 if (isEnabled && UnlockOverlayManager.canDrawOverlays(context)) {
                     val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
                     if (keyguardManager != null && !keyguardManager.isKeyguardLocked) {
-                        UnlockOverlayService.startService(context)
+                        UnlockOverlayService.startService(context, triggerNow = true)
                     }
                 }
             }

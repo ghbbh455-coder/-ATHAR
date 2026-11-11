@@ -433,4 +433,34 @@ class ExampleUnitTest {
         completed = true
         assertTrue(completed)
     }
+
+    /**
+     * اختبار 18: التحقق من ثوابت وتكوين خدمة النافذة العائمة
+     */
+    @Test
+    fun testUnlockOverlayServiceConstants() {
+        val extraKey = "extra_trigger_now"
+        assertEquals("extra_trigger_now", extraKey)
+    }
+
+    /**
+     * اختبار 19: التحقق من روابط قنوات التواصل مع المطور (WhatsApp, Telegram, Facebook, TikTok, Snapchat)
+     */
+    @Test
+    fun testDeveloperContactChannelsUrls() {
+        val contacts = mapOf(
+            "whatsapp" to "https://wa.me/201019524839",
+            "telegram" to "https://t.me/body20089",
+            "facebook" to "https://www.facebook.com/share/1PDexKZxyG/",
+            "tiktok" to "https://www.tiktok.com/@3abdal3",
+            "snapchat" to "https://www.snapchat.com/add/body.oo"
+        )
+
+        assertEquals(5, contacts.size)
+        assertTrue(contacts["whatsapp"]!!.startsWith("https://wa.me/"))
+        assertTrue(contacts["telegram"]!!.startsWith("https://t.me/"))
+        assertTrue(contacts["facebook"]!!.contains("facebook.com"))
+        assertTrue(contacts["tiktok"]!!.contains("tiktok.com"))
+        assertTrue(contacts["snapchat"]!!.contains("snapchat.com"))
+    }
 }

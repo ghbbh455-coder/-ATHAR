@@ -122,15 +122,15 @@ fun AtharCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("athar_card_$title"),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.35f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.2.dp, com.example.ui.theme.AtharGlassBorderBrush),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp)
+                .padding(20.dp)
         ) {
             // Header Row: Category Badge + Title
             Row(
@@ -140,17 +140,17 @@ fun AtharCard(
             ) {
                 if (categoryBadge != null) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        border = BorderStroke(0.5.dp, AtharGold.copy(alpha = 0.5f))
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0x33F5F0E6),
+                        border = BorderStroke(0.8.dp, com.example.ui.theme.AtharGlassBorder)
                     ) {
                         Text(
                             text = categoryBadge,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             ),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
                 } else {
@@ -196,10 +196,11 @@ fun AtharCard(
 
             // Subtext (Tafsir / Benefit / Reference)
             if (!subtext.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                    border = BorderStroke(0.8.dp, com.example.ui.theme.AtharGlassBorder.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -209,7 +210,7 @@ fun AtharCard(
                             lineHeight = 20.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                     )
                 }
             }

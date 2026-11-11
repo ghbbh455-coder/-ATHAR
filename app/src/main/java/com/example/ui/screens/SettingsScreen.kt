@@ -1,10 +1,17 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,16 +28,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Spellcheck
-import androidx.compose.material.icons.filled.VerticalAlignBottom
-import androidx.compose.material.icons.filled.VerticalAlignCenter
-import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,16 +50,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,9 +78,17 @@ import com.example.overlay.UnlockOverlayManager
 import com.example.ui.components.AtharTopBar
 import com.example.ui.theme.AmiriQuranFont
 import com.example.ui.theme.AtharDeepGreen
+import com.example.ui.theme.AtharGlassBorder
+import com.example.ui.theme.AtharGlassBorderBrush
+import com.example.ui.theme.AtharGlassButtonBg
+import com.example.ui.theme.AtharGlassDarkGreen
+import com.example.ui.theme.AtharGlassSecondary
+import com.example.ui.theme.AtharGlassShadow
 import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharIvory
+import com.example.ui.theme.AtharIvoryDark
 import com.example.ui.theme.AtharSecondaryGreen
+import com.example.ui.theme.CairoFontFamily
 import com.example.ui.viewmodel.AtharDestination
 import com.example.ui.viewmodel.AtharViewModel
 
@@ -114,14 +131,15 @@ fun SettingsScreen(
             // 1. Core Feature: Floating Faith Popup Settings Card
             item {
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGold.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     modifier = Modifier.testTag("overlay_settings_card")
                 ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -138,6 +156,7 @@ fun SettingsScreen(
                                     Text(
                                         text = "النافذة الإيمانية عند فتح القفل",
                                         style = MaterialTheme.typography.titleMedium.copy(
+                                            fontFamily = CairoFontFamily,
                                             fontWeight = FontWeight.Bold,
                                             color = AtharGold
                                         )
@@ -145,6 +164,7 @@ fun SettingsScreen(
                                     Text(
                                         text = "عرض آية أو حديث أو ذكر فور فتح قفل الهاتف",
                                         style = MaterialTheme.typography.bodySmall.copy(
+                                            fontFamily = CairoFontFamily,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     )
@@ -178,15 +198,16 @@ fun SettingsScreen(
                         if (!hasOverlayPermission) {
                             Spacer(modifier = Modifier.height(14.dp))
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.5f)),
+                                border = BorderStroke(1.dp, AtharGlassBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
                                         text = "⚠️ يلزم منح إذن الظهور فوق التطبيقات",
                                         style = MaterialTheme.typography.titleSmall.copy(
+                                            fontFamily = CairoFontFamily,
                                             fontWeight = FontWeight.Bold,
                                             color = AtharGold
                                         )
@@ -195,6 +216,7 @@ fun SettingsScreen(
                                     Text(
                                         text = "ليتمكن أثر من إظهار التذكير الإيماني فور فتح شاشة الهاتف، يرجى تفعيل الإذن من إعدادات النظام.",
                                         style = MaterialTheme.typography.bodySmall.copy(
+                                            fontFamily = CairoFontFamily,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             lineHeight = 18.sp
                                         )
@@ -210,12 +232,13 @@ fun SettingsScreen(
                                             }
                                             context.startActivity(intent)
                                         },
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RoundedCornerShape(12.dp),
                                         border = BorderStroke(1.dp, AtharGold)
                                     ) {
                                         Text(
                                             text = "منح إذن الظهور فوق التطبيقات الآن",
                                             style = MaterialTheme.typography.labelMedium.copy(
+                                                fontFamily = CairoFontFamily,
                                                 color = AtharGold,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -226,13 +249,14 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AtharGold.copy(alpha = 0.2f))
+                        HorizontalDivider(color = AtharGlassBorder.copy(alpha = 0.3f))
                         Spacer(modifier = Modifier.height(14.dp))
 
                         // Position Selector (أعلى، منتصف، أسفل)
                         Text(
                             text = "موقع ظهور النافذة على الشاشة:",
                             style = MaterialTheme.typography.titleSmall.copy(
+                                fontFamily = CairoFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -263,13 +287,14 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AtharGold.copy(alpha = 0.2f))
+                        HorizontalDivider(color = AtharGlassBorder.copy(alpha = 0.3f))
                         Spacer(modifier = Modifier.height(14.dp))
 
                         // Content Inclusion Checkboxes
                         Text(
                             text = "أنواع المحتوى المراد ظهوره في النافذة:",
                             style = MaterialTheme.typography.titleSmall.copy(
+                                fontFamily = CairoFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -316,9 +341,9 @@ fun SettingsScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
+                                .height(50.dp)
                                 .testTag("preview_overlay_button"),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AtharGold,
                                 contentColor = AtharDeepGreen
@@ -328,7 +353,10 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "معاينة النافذة العائمة الآن (تجربة فورية)",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                         }
 
@@ -338,23 +366,27 @@ fun SettingsScreen(
                             onClick = { onNavigateToPermissions() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, AtharGold),
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.2.dp, AtharGold),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = AtharGold)
                         ) {
                             Icon(imageVector = Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "إعدادات الأذونات الشاملة وتوفير البطارية",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = "• تظل النافذة ظاهرة حتى تضغط على زر X لإغلاقها يدوياً.\n• لا تظهر النافذة مطلقاً فوق شاشة القفل أو كلمة المرور احتراماً لأمان الجهاز.",
                             style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = CairoFontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.5.sp,
                                 lineHeight = 17.sp
@@ -367,13 +399,14 @@ fun SettingsScreen(
             // 2. Theme Mode Preference
             item {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.3f))
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Filled.Palette,
@@ -383,7 +416,10 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "مظهر التطبيق",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                         }
 
@@ -419,13 +455,14 @@ fun SettingsScreen(
             // 3. Font Size Preference
             item {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.3f))
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Filled.FormatSize,
@@ -435,7 +472,10 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "حجم خط النصوص والآيات",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                         }
 
@@ -471,16 +511,17 @@ fun SettingsScreen(
             // 4. Tashkeel Toggle
             item {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.3f))
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(18.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -497,11 +538,15 @@ fun SettingsScreen(
                             Column {
                                 Text(
                                     text = "عرض التشكيل والحركات",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontFamily = CairoFontFamily,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 )
                                 Text(
                                     text = "إظهار علامات الإعراب والضبط التام للنصوص",
                                     style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = CairoFontFamily,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 )
@@ -525,13 +570,14 @@ fun SettingsScreen(
             item {
                 OutlinedButton(
                     onClick = { viewModel.navigateTo(AtharDestination.Splash) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.6f))
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.2.dp, AtharGlassBorder)
                 ) {
                     Text(
                         text = "عرض شاشة الترحيب والتعريف بالتطبيق",
                         style = MaterialTheme.typography.labelLarge.copy(
+                            fontFamily = CairoFontFamily,
                             color = AtharGold,
                             fontWeight = FontWeight.Bold
                         )
@@ -539,14 +585,141 @@ fun SettingsScreen(
                 }
             }
 
-            // 6. About Athar App Card
+            // 6. Luxury Liquid Glass: Developer Contact Section (تواصل مع المطور)
             item {
                 Card(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Transparent
+                    ),
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(26.dp),
+                            spotColor = AtharGlassShadow,
+                            ambientColor = AtharGlassShadow
+                        )
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    AtharGlassDarkGreen,
+                                    AtharGlassSecondary
+                                )
+                            )
+                        )
+                        .testTag("developer_contact_card")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x33F5F0E6))
+                                    .border(1.dp, AtharGlassBorder, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.VolunteerActivism,
+                                    contentDescription = null,
+                                    tint = AtharGold,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "تواصل مع المطور",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AtharGold,
+                                    fontSize = 18.sp
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "يسعدنا دائماً استقبال استفساراتكم واقتراحاتكم لتطوير التطبيق وخدمة كتاب الله وسنة رسوله ﷺ.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = CairoFontFamily,
+                                color = AtharIvoryDark,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 20.sp,
+                                fontSize = 12.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Interactive Row of 5 Social Glass Buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SocialContactButton(
+                                name = "واتساب",
+                                iconRes = R.drawable.ic_social_whatsapp,
+                                onClick = {
+                                    openSocialUrl(context, "https://wa.me/201019524839")
+                                }
+                            )
+                            SocialContactButton(
+                                name = "تليجرام",
+                                iconRes = R.drawable.ic_social_telegram,
+                                onClick = {
+                                    openSocialUrl(context, "https://t.me/body20089")
+                                }
+                            )
+                            SocialContactButton(
+                                name = "فيسبوك",
+                                iconRes = R.drawable.ic_social_facebook,
+                                onClick = {
+                                    openSocialUrl(context, "https://www.facebook.com/share/1PDexKZxyG/")
+                                }
+                            )
+                            SocialContactButton(
+                                name = "تيك توك",
+                                iconRes = R.drawable.ic_social_tiktok,
+                                onClick = {
+                                    openSocialUrl(context, "https://www.tiktok.com/@3abdal3")
+                                }
+                            )
+                            SocialContactButton(
+                                name = "سناب شات",
+                                iconRes = R.drawable.ic_social_snapchat,
+                                onClick = {
+                                    openSocialUrl(context, "https://www.snapchat.com/add/body.oo")
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 7. About Athar App Card
+            item {
+                Card(
+                    shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.35f))
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -573,6 +746,7 @@ fun SettingsScreen(
                         Text(
                             text = "أَثَــر | ATHAR",
                             style = MaterialTheme.typography.titleLarge.copy(
+                                fontFamily = CairoFontFamily,
                                 fontWeight = FontWeight.Bold,
                                 color = AtharGold
                             )
@@ -593,6 +767,7 @@ fun SettingsScreen(
                         Text(
                             text = "تطبيق إسلامي يعرض آيات قرآنية بالرسم العثماني وأحاديث نبوية صحيحة وأذكارًا وأدعية موثقة دون حاجة إلى اتصال بالإنترنت.",
                             style = MaterialTheme.typography.bodyMedium.copy(
+                                fontFamily = CairoFontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                                 lineHeight = 22.sp
@@ -600,12 +775,13 @@ fun SettingsScreen(
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
-                        HorizontalDivider(color = AtharGold.copy(alpha = 0.2f))
+                        HorizontalDivider(color = AtharGlassBorder.copy(alpha = 0.3f))
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
                             text = "نصوص القرآن الكريم مضبوطة وفق تدقيق ورسم المصحف العثماني الشريف، والأحاديث النبوية مخرجة من أصح كتب السنة المعتمدة.",
                             style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = CairoFontFamily,
                                 color = AtharGold,
                                 textAlign = TextAlign.Center,
                                 lineHeight = 18.sp,
@@ -616,6 +792,64 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SocialContactButton(
+    name: String,
+    @DrawableRes iconRes: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true, radius = 28.dp),
+                onClick = onClick
+            )
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(AtharGlassButtonBg)
+                .border(1.2.dp, AtharGlassBorder, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = name,
+                tint = AtharGold,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = name,
+            style = TextStyle(
+                fontFamily = CairoFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                color = AtharIvory
+            ),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+private fun openSocialUrl(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        Toast.makeText(context, "تعذر فتح الرابط، يرجى المحاولة لاحقاً", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -643,6 +877,7 @@ private fun ContentCheckboxRow(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium.copy(
+                fontFamily = CairoFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             )
         )
@@ -663,6 +898,7 @@ private fun PositionChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = CairoFontFamily,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     fontSize = 11.5.sp
                 ),
@@ -700,6 +936,7 @@ private fun ThemeChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = CairoFontFamily,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                 ),
                 modifier = Modifier.fillMaxWidth(),
@@ -728,6 +965,7 @@ private fun FontSizeChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = CairoFontFamily,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                 ),
                 modifier = Modifier.fillMaxWidth(),

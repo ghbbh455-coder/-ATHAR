@@ -224,14 +224,15 @@ fun HomeScreen(
         // Section: Floating Popup Status & Quick Toggle Card
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.4f)),
+                border = BorderStroke(1.2.dp, com.example.ui.theme.AtharGlassBorderBrush),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
                     .testTag("home_overlay_status_card")
             ) {
                 Row(

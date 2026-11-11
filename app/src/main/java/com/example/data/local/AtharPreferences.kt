@@ -222,17 +222,29 @@ class AtharPreferences(context: Context) {
     }
 
     private fun loadOverlayPosition(): OverlayPosition {
-        val name = prefs.getString(KEY_OVERLAY_POSITION, OverlayPosition.TOP.name)
+        val name = prefs.getString(KEY_OVERLAY_POSITION, OverlayPosition.CENTER.name)
         return try {
-            OverlayPosition.valueOf(name ?: OverlayPosition.TOP.name)
+            OverlayPosition.valueOf(name ?: OverlayPosition.CENTER.name)
         } catch (_: Exception) {
-            OverlayPosition.TOP
+            OverlayPosition.CENTER
         }
     }
 
     fun setOverlayPosition(position: OverlayPosition) {
         prefs.edit().putString(KEY_OVERLAY_POSITION, position.name).apply()
         _overlayPosition.value = position
+    }
+
+    fun getQuranBookmarkPage(): Int = prefs.getInt("quran_bookmark_page", 1)
+
+    fun setQuranBookmarkPage(page: Int) {
+        prefs.edit().putInt("quran_bookmark_page", page).apply()
+    }
+
+    fun getLastReadPage(): Int = prefs.getInt("quran_last_read_page", 1)
+
+    fun setLastReadPage(page: Int) {
+        prefs.edit().putInt("quran_last_read_page", page).apply()
     }
 
     private fun loadBoolean(key: String, default: Boolean): Boolean {

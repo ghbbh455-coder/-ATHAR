@@ -1,5 +1,6 @@
 package com.example.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // Athar Visual Identity
@@ -32,3 +33,19 @@ val AtharLightSurface = Color(0xFFF5F0E6)
 val AtharLightCard = Color(0xFFFFFFFF)
 val AtharTextLightPrimary = Color(0xFF102D25)
 val AtharTextLightSecondary = Color(0xFF3B564C)
+
+// Liquid Glass & Glassmorphism Colors (Athar Overlay & Cards)
+val AtharGlassDarkGreen = Color(0xE6102D25)     // 90% opacity deep green
+val AtharGlassSecondary = Color(0xEB244638)     // 92% opacity secondary green
+val AtharGlassBorder = Color(0x66D6BC82)        // Soft radiant golden border reflection
+val AtharGlassBorderHighlight = Color(0x99D6BC82)
+val AtharGlassButtonBg = Color(0x26F5F0E6)      // 15% opacity ivory glass button
+val AtharGlassButtonBorder = Color(0x33D6BC82)  // Soft golden button border
+val AtharGlassShadow = Color(0x8A000000)        // Deep ambient shadow
+
+val AtharGlassBorderBrush = Brush.linearGradient(
+    listOf(Color(0x66D6BC82), Color(0x1AD6BC82))
+)
+val AtharGlassCardGradient = Brush.verticalGradient(
+    listOf(Color(0xE6102D25), Color(0xEB244638))
+)

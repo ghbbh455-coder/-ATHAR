@@ -61,6 +61,9 @@ class UnlockOverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         registerUnlockReceiver()
+        if (intent?.getBooleanExtra(EXTRA_TRIGGER_NOW, false) == true) {
+            triggerUnlockReminder(this)
+        }
         return START_STICKY
     }
 
@@ -87,11 +90,16 @@ class UnlockOverlayService : Service() {
     }
 
     private fun triggerUnlockReminder(context: Context) {
+        // Prevent stacking two overlay windows on top of each other
+        if (UnlockOverlayManager.isOverlayShowing()) {
+            return
+        }
+
         try {
-            // Briefly acquire partial wakelock to ensure CPU does not sleep during overlay launch
+            // Briefly acquire partial wakelock (3s) to ensure CPU does not sleep during overlay launch
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             val wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "athar:unlock_wakelock")
-            wakeLock?.acquire(2000L)
+            wakeLock?.acquire(3000L)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -262,11 +270,16 @@ class UnlockOverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val EXTRA_TRIGGER_NOW = "extra_trigger_now"
         private const val CHANNEL_ID = "athar_unlock_overlay_channel"
         private const val NOTIFICATION_ID = 1001
 
-        fun startService(context: Context) {
-            val intent = Intent(context, UnlockOverlayService::class.java)
+        fun startService(context: Context, triggerNow: Boolean = false) {
+            val intent = Intent(context, UnlockOverlayService::class.java).apply {
+                if (triggerNow) {
+                    putExtra(EXTRA_TRIGGER_NOW, true)
+                }
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

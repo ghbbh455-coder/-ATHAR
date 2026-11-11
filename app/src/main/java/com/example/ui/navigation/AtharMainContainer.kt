@@ -40,6 +40,7 @@ import com.example.ui.screens.FavoritesScreen
 import com.example.ui.screens.HadithScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.PermissionsScreen
+import com.example.ui.screens.QuranPagerScreen
 import com.example.ui.screens.QuranScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.SplashScreen
@@ -163,7 +164,7 @@ fun AtharMainContainer(
                                     )
                                 }
                                 AtharDestination.Quran -> {
-                                    QuranScreen(
+                                    QuranPagerScreen(
                                         viewModel = viewModel,
                                         onNavigateBack = { viewModel.navigateTo(AtharDestination.Home) }
                                     )

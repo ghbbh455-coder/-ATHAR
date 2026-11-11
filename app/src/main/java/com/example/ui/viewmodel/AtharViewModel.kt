@@ -296,6 +296,11 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
         _quranSearch.value = query
     }
 
+    fun getQuranBookmarkPage(): Int = prefs.getQuranBookmarkPage()
+    fun setQuranBookmarkPage(page: Int) = prefs.setQuranBookmarkPage(page)
+    fun getLastReadPage(): Int = prefs.getLastReadPage()
+    fun setLastReadPage(page: Int) = prefs.setLastReadPage(page)
+
     fun selectQuranTopic(topic: String?) {
         _selectedQuranTopic.value = topic
     }
