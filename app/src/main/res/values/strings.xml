@@ -7,4 +7,6 @@
     <string name="nav_adhkar">الأذكار</string>
     <string name="nav_favorites">المفضلة</string>
     <string name="nav_settings">الإعدادات</string>
+    <string name="widget_name">أثر | تذكير إيماني</string>
+    <string name="widget_description">ويدجت تفاعلي يعرض آيات قرآنية وأحاديث نبوية وأذكاراً مع إمكانية التحديث بلمسة واحدة</string>
 </resources>

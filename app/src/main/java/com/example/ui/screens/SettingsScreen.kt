@@ -65,7 +65,6 @@ import com.example.R
 import com.example.data.model.AtharFontSize
 import com.example.data.model.AtharThemeMode
 import com.example.data.model.OverlayPosition
-import com.example.data.sources.TanzilImporter
 import com.example.overlay.UnlockOverlayManager
 import com.example.ui.components.AtharTopBar
 import com.example.ui.theme.AmiriQuranFont
@@ -80,6 +79,7 @@ import com.example.ui.viewmodel.AtharViewModel
 fun SettingsScreen(
     viewModel: AtharViewModel,
     onNavigateBack: () -> Unit,
+    onNavigateToPermissions: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -332,6 +332,25 @@ fun SettingsScreen(
                             )
                         }
 
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedButton(
+                            onClick = { onNavigateToPermissions() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, AtharGold),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AtharGold)
+                        ) {
+                            Icon(imageVector = Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "إعدادات الأذونات الشاملة وتوفير البطارية",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "• تظل النافذة ظاهرة حتى تضغط على زر X لإغلاقها يدوياً.\n• لا تظهر النافذة مطلقاً فوق شاشة القفل أو كلمة المرور احتراماً لأمان الجهاز.",
@@ -520,7 +539,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 6. About Athar App Card & Tanzil Attribution
+            // 6. About Athar App Card
             item {
                 Card(
                     shape = RoundedCornerShape(18.dp),
@@ -585,7 +604,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = TanzilImporter.TANZIL_COPYRIGHT_NOTICE,
+                            text = "نصوص القرآن الكريم مضبوطة وفق تدقيق ورسم المصحف العثماني الشريف، والأحاديث النبوية مخرجة من أصح كتب السنة المعتمدة.",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = AtharGold,
                                 textAlign = TextAlign.Center,

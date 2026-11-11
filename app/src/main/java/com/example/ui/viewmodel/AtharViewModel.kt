@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 
 sealed class AtharDestination(val route: String, val titleArabic: String) {
     object Splash : AtharDestination("splash", "أثر")
+    object Permissions : AtharDestination("permissions", "أذونات التشغيل")
     object Home : AtharDestination("home", "الرئيسية")
     object Quran : AtharDestination("quran", "القرآن الكريم")
     object Hadith : AtharDestination("hadith", "الحديث النبوي")
@@ -149,7 +150,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                     badge = "${v.surahName} (الآية ${v.verseNumber})",
                     title = v.topic,
                     text = v.textUthmani,
-                    reference = "${v.surahName}: ${v.verseNumber} [${v.source}]",
+                    reference = "${v.surahName}: ${v.verseNumber}",
                     topic = v.topic,
                     benefit = v.tafsirSnippet
                 )
@@ -164,7 +165,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                     badge = "${h.collectionName} - رقم ${h.hadithNumber}",
                     title = h.chapterName,
                     text = h.arabicText,
-                    reference = "${h.collectionName} (${h.grading} - ${h.gradingSource})",
+                    reference = h.collectionName,
                     topic = h.topic,
                     benefit = h.benefit
                 )
@@ -180,7 +181,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                     badge = d.category,
                     title = if (d.repetitionCount > 1) "التكرار: ${d.repetitionCount} مرات" else "مرة واحدة",
                     text = d.arabicText,
-                    reference = "${d.sourceBook} (${d.reference})",
+                    reference = d.reference,
                     topic = d.category,
                     benefit = d.virtue
                 )
@@ -219,7 +220,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                         type = ContentType.QURAN,
                         title = "${verse.surahName} (الآية ${verse.verseNumber})",
                         contentText = verse.textUthmani,
-                        referenceText = "${verse.surahName}: ${verse.verseNumber} [${verse.source}]",
+                        referenceText = "${verse.surahName}: ${verse.verseNumber}",
                         categoryOrTopic = verse.topic
                     )
                 )
@@ -234,7 +235,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                         type = ContentType.HADITH,
                         title = "${hadith.collectionName} - رقم ${hadith.hadithNumber}",
                         contentText = hadith.arabicText,
-                        referenceText = "${hadith.collectionName} (${hadith.grading} - ${hadith.gradingSource})",
+                        referenceText = hadith.collectionName,
                         categoryOrTopic = hadith.topic
                     )
                 )
@@ -250,7 +251,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
                         type = if (isDua) ContentType.DUA else ContentType.DHIKR,
                         title = dhikr.category,
                         contentText = dhikr.arabicText,
-                        referenceText = "${dhikr.sourceBook} - ${dhikr.reference}",
+                        referenceText = dhikr.reference,
                         categoryOrTopic = dhikr.virtue
                     )
                 )

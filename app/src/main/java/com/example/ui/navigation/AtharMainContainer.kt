@@ -33,11 +33,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AtharThemeMode
+import com.example.overlay.DevicePermissionHelper
 import com.example.ui.screens.AdhkarScreen
 import com.example.ui.screens.AllContentScreen
 import com.example.ui.screens.FavoritesScreen
 import com.example.ui.screens.HadithScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.PermissionsScreen
 import com.example.ui.screens.QuranScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.SplashScreen
@@ -46,6 +48,7 @@ import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharTheme
 import com.example.ui.viewmodel.AtharDestination
 import com.example.ui.viewmodel.AtharViewModel
+import androidx.compose.ui.platform.LocalContext
 
 data class BottomNavItem(
     val destination: AtharDestination,
@@ -57,6 +60,7 @@ data class BottomNavItem(
 fun AtharMainContainer(
     viewModel: AtharViewModel
 ) {
+    val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val isSystemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -81,13 +85,27 @@ fun AtharMainContainer(
             )
 
             // Android Back button handling
-            BackHandler(enabled = currentDestination != AtharDestination.Home && currentDestination != AtharDestination.Splash) {
+            BackHandler(enabled = currentDestination != AtharDestination.Home && currentDestination != AtharDestination.Splash && currentDestination != AtharDestination.Permissions) {
                 viewModel.navigateTo(AtharDestination.Home)
             }
 
             if (currentDestination == AtharDestination.Splash) {
                 SplashScreen(
-                    onStartClick = { viewModel.navigateTo(AtharDestination.Home) }
+                    onStartClick = {
+                        val needsPermissions = !DevicePermissionHelper.canDrawOverlays(context)
+                        if (needsPermissions) {
+                            viewModel.navigateTo(AtharDestination.Permissions)
+                        } else {
+                            viewModel.navigateTo(AtharDestination.Home)
+                        }
+                    }
+                )
+            } else if (currentDestination == AtharDestination.Permissions) {
+                PermissionsScreen(
+                    onContinueClick = {
+                        viewModel.prefs.setHasCompletedPermissionsOnboarding(true)
+                        viewModel.navigateTo(AtharDestination.Home)
+                    }
                 )
             } else {
                 Scaffold(
@@ -177,7 +195,16 @@ fun AtharMainContainer(
                                 AtharDestination.Settings -> {
                                     SettingsScreen(
                                         viewModel = viewModel,
-                                        onNavigateBack = { viewModel.navigateTo(AtharDestination.Home) }
+                                        onNavigateBack = { viewModel.navigateTo(AtharDestination.Home) },
+                                        onNavigateToPermissions = { viewModel.navigateTo(AtharDestination.Permissions) }
+                                    )
+                                }
+                                AtharDestination.Permissions -> {
+                                    PermissionsScreen(
+                                        onContinueClick = {
+                                            viewModel.prefs.setHasCompletedPermissionsOnboarding(true)
+                                            viewModel.navigateTo(AtharDestination.Home)
+                                        }
                                     )
                                 }
                             }

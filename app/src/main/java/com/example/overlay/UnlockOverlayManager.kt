@@ -89,6 +89,7 @@ object UnlockOverlayManager {
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
@@ -101,16 +102,24 @@ object UnlockOverlayManager {
                 overlayCard.scaleX = 0.94f
                 overlayCard.scaleY = 0.94f
 
-                windowManager.addView(overlayCard, params)
-                currentOverlayView = overlayCard
+                try {
+                    windowManager.addView(overlayCard, params)
+                    currentOverlayView = overlayCard
 
-                // Smooth entrance animation
-                overlayCard.animate()
-                    .alpha(1f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(240)
-                    .start()
+                    // Smooth entrance animation
+                    overlayCard.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(240)
+                        .start()
+                } catch (e: WindowManager.BadTokenException) {
+                    e.printStackTrace()
+                } catch (e: IllegalArgumentException) {
+                    e.printStackTrace()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -146,6 +155,9 @@ object UnlockOverlayManager {
                 if (view.isAttachedToWindow) {
                     windowManager.removeView(view)
                 }
+            } catch (e: IllegalArgumentException) {
+                // View was not attached or already detached
+                e.printStackTrace()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -341,7 +353,7 @@ object UnlockOverlayManager {
                     item.referenceText
                 }
                 text = combined
-                setTextColor(COLOR_GOLD_DARK)
+                setTextColor(COLOR_IVORY)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 gravity = Gravity.CENTER
                 layoutDirection = View.LAYOUT_DIRECTION_RTL

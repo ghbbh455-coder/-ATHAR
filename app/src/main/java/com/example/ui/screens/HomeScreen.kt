@@ -274,16 +274,10 @@ fun HomeScreen(
                     }
 
                     Switch(
-                        checked = overlayEnabled,
+                        checked = overlayEnabled && hasOverlayPermission,
                         onCheckedChange = { isChecked ->
-                            if (isChecked && !hasOverlayPermission) {
-                                val intent = Intent(
-                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:${context.packageName}")
-                                ).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
+                            if (!hasOverlayPermission) {
+                                onNavigate(AtharDestination.Permissions)
                             } else {
                                 viewModel.setOverlayEnabled(context, isChecked)
                             }
@@ -370,7 +364,7 @@ fun HomeScreen(
                             if (dailyAyah != null) {
                                 val isFav = favoriteIds.contains(dailyAyah.id)
                                 AtharCard(
-                                    categoryBadge = "${dailyAyah.surahName} (${dailyAyah.source})",
+                                    categoryBadge = "${dailyAyah.surahName} (الآية ${dailyAyah.verseNumber})",
                                     title = "الآية ${dailyAyah.verseNumber}",
                                     content = dailyAyah.textUthmani,
                                     subtext = "وقفة تدبرية: ${dailyAyah.tafsirSnippet}",
@@ -389,7 +383,7 @@ fun HomeScreen(
                                             context,
                                             "آية اليوم",
                                             dailyAyah.textUthmani,
-                                            "${dailyAyah.surahName}: ${dailyAyah.verseNumber} [${dailyAyah.source}]"
+                                            "${dailyAyah.surahName}: ${dailyAyah.verseNumber}"
                                         )
                                     }
                                 )
@@ -405,7 +399,7 @@ fun HomeScreen(
                                     categoryBadge = "${dailyHadith.collectionName} - رقم ${dailyHadith.hadithNumber}",
                                     title = dailyHadith.chapterName,
                                     content = dailyHadith.arabicText,
-                                    subtext = "الحكم: ${dailyHadith.grading} (${dailyHadith.gradingSource})\nالفائدة: ${dailyHadith.benefit}",
+                                    subtext = "الفائدة الإيمانية: ${dailyHadith.benefit}\nالمصدر: ${dailyHadith.collectionName}",
                                     isQuranOrHadith = true,
                                     fontSizeMultiplier = fontSize.scaleFactor,
                                     isFavorite = isFav,
@@ -421,7 +415,7 @@ fun HomeScreen(
                                             context,
                                             dailyHadith.chapterName,
                                             dailyHadith.arabicText,
-                                            "${dailyHadith.collectionName} رقم ${dailyHadith.hadithNumber} (${dailyHadith.grading})"
+                                            "${dailyHadith.collectionName} - رقم ${dailyHadith.hadithNumber}"
                                         )
                                     }
                                 )

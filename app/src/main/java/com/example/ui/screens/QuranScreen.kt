@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.QuranSurahCatalog
 import com.example.data.local.SurahMetadata
 import com.example.data.model.ContentType
-import com.example.data.sources.TanzilImporter
 import com.example.ui.components.AtharCard
 import com.example.ui.components.AtharTopBar
 import com.example.ui.theme.AmiriQuranFont
@@ -325,10 +324,10 @@ fun QuranScreen(
                 items(filteredVerses, key = { it.id }) { verse ->
                     val isFav = favoriteIds.contains(verse.id)
                     AtharCard(
-                        categoryBadge = "${verse.surahName} : الآية ${verse.verseNumber}",
+                        categoryBadge = "${verse.surahName} (الآية ${verse.verseNumber})",
                         title = verse.topic,
                         content = verse.textUthmani,
-                        subtext = "وقفة تدبرية: ${verse.tafsirSnippet}\nالمصدر المعتمد: ${verse.source} (${verse.sourceVersion})",
+                        subtext = "وقفة تدبرية: ${verse.tafsirSnippet}",
                         isQuranOrHadith = true,
                         fontSizeMultiplier = fontSize.scaleFactor,
                         isFavorite = isFav,
@@ -336,7 +335,7 @@ fun QuranScreen(
                         onCopy = {
                             viewModel.copyToClipboard(
                                 context,
-                                "${verse.textUthmani}\n[${verse.surahName}: ${verse.verseNumber} - ${verse.source}]"
+                                "${verse.textUthmani}\n[${verse.surahName}: ${verse.verseNumber}]"
                             )
                         },
                         onShare = {
@@ -344,7 +343,7 @@ fun QuranScreen(
                                 context,
                                 "${verse.surahName} (الآية ${verse.verseNumber})",
                                 verse.textUthmani,
-                                "${verse.surahName}: ${verse.verseNumber} [${verse.source}]"
+                                "${verse.surahName}: ${verse.verseNumber}"
                             )
                         }
                     )
@@ -370,7 +369,7 @@ fun QuranScreen(
 
                 item {
                     Text(
-                        text = TanzilImporter.TANZIL_COPYRIGHT_NOTICE,
+                        text = "نصوص القرآن الكريم مضبوطة وفق تدقيق ورسم المصحف العثماني",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = AtharGold.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,
@@ -401,7 +400,7 @@ fun QuranScreen(
 
                 item {
                     Text(
-                        text = "نصوص القرآن الكريم مضبوطة وفق تدقيق ورسم المصحف العثماني من مشروع تنزيل المعتمد (Tanzil.net)",
+                        text = "نصوص القرآن الكريم مضبوطة وفق رسم المصحف العثماني الشريف",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = AtharGold.copy(alpha = 0.8f),
                             textAlign = TextAlign.Center,

@@ -30,6 +30,9 @@ class AtharPreferences(context: Context) {
     private val _hasSeenWelcome = MutableStateFlow(loadHasSeenWelcome())
     val hasSeenWelcome: StateFlow<Boolean> = _hasSeenWelcome.asStateFlow()
 
+    private val _hasCompletedPermissionsOnboarding = MutableStateFlow(loadHasCompletedPermissionsOnboarding())
+    val hasCompletedPermissionsOnboarding: StateFlow<Boolean> = _hasCompletedPermissionsOnboarding.asStateFlow()
+
     private val _dhikrCounters = MutableStateFlow<Map<String, Int>>(loadDhikrCounters())
     val dhikrCounters: StateFlow<Map<String, Int>> = _dhikrCounters.asStateFlow()
 
@@ -103,7 +106,7 @@ class AtharPreferences(context: Context) {
                         type = ContentType.HADITH,
                         title = hadith.title,
                         contentText = hadith.matnWithTashkeel,
-                        referenceText = "${hadith.source} - ${hadith.narrator}",
+                        referenceText = hadith.source,
                         categoryOrTopic = hadith.topic
                     )
                 )
@@ -173,6 +176,15 @@ class AtharPreferences(context: Context) {
     fun setHasSeenWelcome(seen: Boolean) {
         prefs.edit().putBoolean(KEY_HAS_SEEN_WELCOME, seen).apply()
         _hasSeenWelcome.value = seen
+    }
+
+    private fun loadHasCompletedPermissionsOnboarding(): Boolean {
+        return prefs.getBoolean(KEY_PERMISSIONS_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setHasCompletedPermissionsOnboarding(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_PERMISSIONS_ONBOARDING_COMPLETED, completed).apply()
+        _hasCompletedPermissionsOnboarding.value = completed
     }
 
     private fun loadDhikrCounters(): Map<String, Int> {
@@ -282,6 +294,39 @@ class AtharPreferences(context: Context) {
         prefs.edit().remove(KEY_SHOWN_OVERLAY_IDS).apply()
     }
 
+    data class WidgetContent(
+        val id: String,
+        val type: String,
+        val badge: String,
+        val text: String,
+        val reference: String,
+        val isFavorite: Boolean = false
+    )
+
+    fun getWidgetContent(): WidgetContent {
+        val id = prefs.getString(KEY_WIDGET_ID, "quran_1") ?: "quran_1"
+        val type = prefs.getString(KEY_WIDGET_TYPE, "quran") ?: "quran"
+        val badge = prefs.getString(KEY_WIDGET_BADGE, "سورة الرَّعْد (آية 28)") ?: "سورة الرَّعْد (آية 28)"
+        val text = prefs.getString(
+            KEY_WIDGET_TEXT,
+            "الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ"
+        ) ?: "الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ"
+        val reference = prefs.getString(KEY_WIDGET_REF, "سورة الرَّعْد: 28") ?: "سورة الرَّعْد: 28"
+        val isFav = prefs.getBoolean(KEY_WIDGET_IS_FAV, false)
+        return WidgetContent(id, type, badge, text, reference, isFav)
+    }
+
+    fun saveWidgetContent(content: WidgetContent) {
+        prefs.edit()
+            .putString(KEY_WIDGET_ID, content.id)
+            .putString(KEY_WIDGET_TYPE, content.type)
+            .putString(KEY_WIDGET_BADGE, content.badge)
+            .putString(KEY_WIDGET_TEXT, content.text)
+            .putString(KEY_WIDGET_REF, content.reference)
+            .putBoolean(KEY_WIDGET_IS_FAV, content.isFavorite)
+            .commit()
+    }
+
     companion object {
         private const val KEY_FAVORITES = "pref_favorites"
         private const val KEY_THEME_MODE = "pref_theme_mode"
@@ -296,5 +341,12 @@ class AtharPreferences(context: Context) {
         private const val KEY_OVERLAY_SHOW_DUA = "pref_overlay_show_dua"
         private const val KEY_LAST_OVERLAY_TIMESTAMP = "pref_last_overlay_timestamp"
         private const val KEY_SHOWN_OVERLAY_IDS = "pref_shown_overlay_ids"
+        private const val KEY_WIDGET_ID = "pref_widget_id"
+        private const val KEY_WIDGET_TYPE = "pref_widget_type"
+        private const val KEY_WIDGET_BADGE = "pref_widget_badge"
+        private const val KEY_WIDGET_TEXT = "pref_widget_text"
+        private const val KEY_WIDGET_REF = "pref_widget_ref"
+        private const val KEY_WIDGET_IS_FAV = "pref_widget_is_fav"
+        private const val KEY_PERMISSIONS_ONBOARDING_COMPLETED = "pref_permissions_onboarding_completed"
     }
 }
