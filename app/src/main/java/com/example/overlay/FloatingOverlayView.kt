@@ -26,13 +26,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
+import com.example.util.ShareImageHelper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -244,6 +247,18 @@ fun FloatingOverlayCard(
         }
     }
 
+    fun handleShareAsImage() {
+        coroutineScope.launch {
+            ShareImageHelper.shareCardAsImage(
+                context = context,
+                badgeText = item.badgeText,
+                mainText = item.mainText,
+                referenceText = item.referenceText,
+                benefitOrReflection = item.benefitOrTafsir
+            )
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -354,7 +369,20 @@ fun FloatingOverlayCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Share Button
+                        // Share as Image Button
+                        GlassActionButton(
+                            onClick = { handleShareAsImage() },
+                            contentDescription = "مشاركة كصورة مصممة"
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Image,
+                                contentDescription = null,
+                                tint = AtharGold,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+
+                        // Share Text Button
                         GlassActionButton(
                             onClick = { handleShare() },
                             contentDescription = "مشاركة النص الإيماني"
@@ -422,26 +450,36 @@ fun FloatingOverlayCard(
                         .padding(horizontal = 4.dp)
                 )
 
-                // Subtext: Benefit or Tafsir Snippet & Reference
-                if (item.benefitOrTafsir.isNotBlank() || item.referenceText.isNotBlank()) {
+                // Subtext: Benefit or Tafsir Snippet & Reference (Clean, without raw URLs)
+                val cleanBenefit = item.benefitOrTafsir
+                    .replace("Tanzil Project (tanzil.net)", "")
+                    .replace("tanzil.net", "")
+                    .trim()
+                val cleanRef = item.referenceText
+                    .replace("Tanzil Project (tanzil.net)", "")
+                    .replace("tanzil.net", "")
+                    .trim()
+
+                if (cleanBenefit.isNotBlank() || cleanRef.isNotBlank()) {
                     Spacer(modifier = Modifier.height(10.dp))
-                    val combinedRef = if (item.benefitOrTafsir.isNotBlank() && item.referenceText.isNotBlank()) {
-                        "${item.benefitOrTafsir} • ${item.referenceText}"
+                    val combinedRef = if (cleanBenefit.isNotBlank() && cleanRef.isNotBlank()) {
+                        "${cleanBenefit} • ${cleanRef}"
                     } else {
-                        item.benefitOrTafsir.ifBlank { item.referenceText }
+                        cleanBenefit.ifBlank { cleanRef }
                     }
                     Text(
                         text = combinedRef,
                         style = TextStyle(
                             fontFamily = CairoFontFamily,
                             fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
-                            lineHeight = 18.sp,
+                            fontSize = 13.sp,
+                            lineHeight = 22.sp,
                             textAlign = TextAlign.Center,
                             color = AtharIvoryDark
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .wrapContentHeight()
                             .padding(horizontal = 6.dp)
                     )
                 }

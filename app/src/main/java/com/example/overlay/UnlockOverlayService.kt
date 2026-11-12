@@ -16,6 +16,8 @@ import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.local.AtharPreferences
+import com.example.data.local.FastingReminderManager
+import com.example.data.local.JabrKhatirManager
 import com.example.data.local.db.AtharDatabase
 import com.example.data.model.ContentType
 import kotlinx.coroutines.CoroutineScope
@@ -122,6 +124,62 @@ class UnlockOverlayService : Service() {
 
         serviceScope.launch {
             try {
+                val currentPosition = prefs.overlayPosition.value
+
+                // 1. First Unlock of the Day after Fajr (04:00 AM+): Exclusively show "Jabr Al-Khatir" message
+                if (JabrKhatirManager.shouldShowFajrJabrKhatir(context)) {
+                    val jabr = JabrKhatirManager.getTodayJabrKhatir()
+                    val jabrItem = OverlayContentItem(
+                        id = "jabr_${jabr.id}",
+                        contentType = ContentType.QURAN,
+                        badgeText = "بشارة فجرية 🌿 | جبر خاطر",
+                        mainText = jabr.ayahText,
+                        referenceText = jabr.surahAndVerse,
+                        topic = "جبر الخواطر والسكينة",
+                        benefitOrTafsir = jabr.reflection
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        UnlockOverlayManager.showOverlay(
+                            context = context,
+                            item = jabrItem,
+                            position = currentPosition
+                        )
+                    }
+
+                    JabrKhatirManager.markJabrKhatirShownToday(context)
+                    prefs.recordOverlayShown()
+                    return@launch
+                }
+
+                // 2. Fasting Eve Reminder (eve of Monday, Thursday, Ayyam al-Beed, Arafah, Ashura)
+                if (FastingReminderManager.shouldShowFastingOverlay(context)) {
+                    val fasting = FastingReminderManager.getActiveFastingOccasion(context)
+                    if (fasting != null) {
+                        val fastingItem = OverlayContentItem(
+                            id = fasting.id,
+                            contentType = ContentType.HADITH,
+                            badgeText = fasting.title,
+                            mainText = fasting.hadithText,
+                            referenceText = fasting.source,
+                            topic = "صيام التطوع (${fasting.occasionName})",
+                            benefitOrTafsir = "فضل هذا اليوم: ${fasting.virtue}\n🌙 لا تنسَ تبييت النية والسحور المبارك"
+                        )
+
+                        withContext(Dispatchers.Main) {
+                            UnlockOverlayManager.showOverlay(
+                                context = context,
+                                item = fastingItem,
+                                position = currentPosition
+                            )
+                        }
+
+                        FastingReminderManager.markFastingOverlayShown(context, fasting)
+                        prefs.recordOverlayShown()
+                        return@launch
+                    }
+                }
+
                 val db = AtharDatabase.getDatabase(context)
                 val approvedVerses = db.quranDao().getApprovedVerses().first()
                 val approvedHadiths = db.hadithDao().getApprovedHadiths().first()
@@ -141,9 +199,9 @@ class UnlockOverlayService : Service() {
                             OverlayContentItem(
                                 id = verse.id,
                                 contentType = ContentType.QURAN,
-                                badgeText = "${verse.surahName} (آية ${verse.verseNumber})",
+                                badgeText = "سورة ${verse.surahName} (آية ${verse.verseNumber})",
                                 mainText = verse.textUthmani,
-                                referenceText = "${verse.surahName}: ${verse.verseNumber}",
+                                referenceText = "سورة ${verse.surahName}: ${verse.verseNumber}",
                                 topic = verse.topic,
                                 benefitOrTafsir = verse.tafsirSnippet
                             )
@@ -184,20 +242,8 @@ class UnlockOverlayService : Service() {
                     }
                 }
 
-                if (allCandidates.isEmpty()) return@launch
-
-                // Smart local rotation: Filter out items already shown in this rotation cycle
-                val shownIds = prefs.getShownOverlayIds()
-                var unshown = allCandidates.filter { !shownIds.contains(it.id) }
-
-                if (unshown.isEmpty()) {
-                    // All candidates exhausted! Reset rotation history so everything is available again.
-                    prefs.resetShownHistory()
-                    unshown = allCandidates
-                }
-
-                val chosen = unshown.random()
-                val currentPosition = prefs.overlayPosition.value
+                // 2. Contextual Content Selection (Morning, Evening, Night, Friday, etc.)
+                val chosen = ContentSelector.selectContextualContent(context, allCandidates)
 
                 withContext(Dispatchers.Main) {
                     UnlockOverlayManager.showOverlay(
@@ -258,6 +304,29 @@ class UnlockOverlayService : Service() {
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
+        }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        try {
+            val restartIntent = Intent(applicationContext, UnlockOverlayService::class.java).also {
+                it.setPackage(packageName)
+            }
+            val restartPendingIntent = PendingIntent.getService(
+                this,
+                101,
+                restartIntent,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
+            alarmManager?.set(
+                android.app.AlarmManager.ELAPSED_REALTIME,
+                android.os.SystemClock.elapsedRealtime() + 1500L,
+                restartPendingIntent
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

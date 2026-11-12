@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
@@ -109,6 +110,7 @@ fun SettingsScreen(
     val showHadithInOverlay by viewModel.showHadithInOverlay.collectAsState()
     val showDhikrInOverlay by viewModel.showDhikrInOverlay.collectAsState()
     val showDuaInOverlay by viewModel.showDuaInOverlay.collectAsState()
+    val fastingRemindersEnabled by viewModel.fastingRemindersEnabled.collectAsState()
 
     val hasOverlayPermission = UnlockOverlayManager.canDrawOverlays(context)
 
@@ -566,7 +568,76 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. Replay Welcome Screen
+            // 5. Fasting Reminders Setting Card
+            item {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("fasting_reminder_settings_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0x33D6BC82),
+                                border = BorderStroke(1.dp, AtharGold),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.NightsStay,
+                                        contentDescription = null,
+                                        tint = AtharGold,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "تذكير بصيام النوافل (الأيام البيض والاثنين والخميس)",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontFamily = CairoFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                                Text(
+                                    text = "تنبيه مساء ليلة الصيام لتبييت النية والسحور، ويشمل عرفة وعاشوراء",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = CairoFontFamily,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.5.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = fastingRemindersEnabled,
+                            onCheckedChange = { viewModel.setFastingRemindersEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AtharGold,
+                                checkedTrackColor = AtharSecondaryGreen
+                            ),
+                            modifier = Modifier.testTag("fasting_reminders_switch")
+                        )
+                    }
+                }
+            }
+
+            // 6. Replay Welcome Screen
             item {
                 OutlinedButton(
                     onClick = { viewModel.navigateTo(AtharDestination.Splash) },

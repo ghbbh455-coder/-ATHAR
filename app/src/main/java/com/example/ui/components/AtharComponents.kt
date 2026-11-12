@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,13 +38,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.example.util.ShareImageHelper
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,17 +116,26 @@ fun AtharCard(
     onToggleFavorite: () -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
+    onShareImage: (() -> Unit)? = null,
     extraContent: (@Composable () -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val cardBg = MaterialTheme.colorScheme.surfaceVariant
     val favTint by animateColorAsState(
         targetValue = if (isFavorite) AtharGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         label = "fav_color"
     )
 
+    val cleanSubtext = subtext
+        ?.replace("Tanzil Project (tanzil.net)", "")
+        ?.replace("tanzil.net", "")
+        ?.trim()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .wrapContentHeight()
             .testTag("athar_card_$title"),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
@@ -130,11 +145,14 @@ fun AtharCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .wrapContentHeight()
                 .padding(20.dp)
         ) {
             // Header Row: Category Badge + Title
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -148,7 +166,8 @@ fun AtharCard(
                             text = categoryBadge,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp
                             ),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
@@ -161,7 +180,8 @@ fun AtharCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = AtharGold
+                        color = AtharGold,
+                        lineHeight = 24.sp
                     ),
                     modifier = Modifier.weight(1f, fill = false),
                     textAlign = TextAlign.Start
@@ -177,40 +197,47 @@ fun AtharCard(
                     MaterialTheme.typography.bodyLarge.copy(
                         fontFamily = AmiriQuranFont,
                         fontSize = (21 * fontSizeMultiplier).sp,
-                        lineHeight = (36 * fontSizeMultiplier).sp,
+                        lineHeight = (38 * fontSizeMultiplier).sp,
                         fontWeight = FontWeight.Normal,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 } else {
                     MaterialTheme.typography.bodyLarge.copy(
                         fontSize = (16 * fontSizeMultiplier).sp,
-                        lineHeight = (26 * fontSizeMultiplier).sp,
+                        lineHeight = (28 * fontSizeMultiplier).sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .wrapContentHeight()
+                    .padding(vertical = 4.dp)
                     .testTag("athar_card_content")
             )
 
             // Subtext (Tafsir / Benefit / Reference)
-            if (!subtext.isNullOrBlank()) {
+            if (!cleanSubtext.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
                     border = BorderStroke(0.8.dp, com.example.ui.theme.AtharGlassBorder.copy(alpha = 0.35f)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
                 ) {
                     Text(
-                        text = subtext,
+                        text = cleanSubtext,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = (13 * fontSizeMultiplier).sp,
-                            lineHeight = 20.sp,
+                            lineHeight = 24.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
                     )
                 }
             }
@@ -252,6 +279,31 @@ fun AtharCard(
                         imageVector = Icons.Filled.ContentCopy,
                         contentDescription = "نسخ النص",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        if (onShareImage != null) {
+                            onShareImage()
+                        } else {
+                            coroutineScope.launch {
+                                ShareImageHelper.shareCardAsImage(
+                                    context = context,
+                                    badgeText = categoryBadge ?: "",
+                                    mainText = content,
+                                    referenceText = title,
+                                    benefitOrReflection = cleanSubtext ?: ""
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("action_share_image")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Image,
+                        contentDescription = "مشاركة كصورة مصممة",
+                        tint = AtharGold
                     )
                 }
 

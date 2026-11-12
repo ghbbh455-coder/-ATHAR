@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,28 +28,37 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.mutableStateOf
+import com.example.ui.components.DailyImpactCard
+import com.example.ui.components.MoodGuidanceSheet
+import com.example.ui.components.MoodSelectorCard
+import com.example.ui.components.SpiritualMood
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,21 +72,32 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.local.FastingReminderManager
+import com.example.data.local.JabrKhatirManager
 import com.example.data.model.ContentType
 import com.example.overlay.UnlockOverlayManager
 import com.example.ui.components.AtharCard
+import com.example.ui.components.FastingBannerCard
 import com.example.ui.theme.AmiriQuranFont
 import com.example.ui.theme.AtharDeepGreen
+import com.example.ui.theme.AtharGlassBorderBrush
+import com.example.ui.theme.AtharGlassDarkGreen
+import com.example.ui.theme.AtharGlassSecondary
 import com.example.ui.theme.AtharGold
+import com.example.ui.theme.AtharGoldDark
 import com.example.ui.theme.AtharGoldLight
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharSecondaryGreen
 import com.example.ui.viewmodel.AtharDestination
 import com.example.ui.viewmodel.AtharViewModel
+import com.example.util.ShareImageHelper
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: AtharViewModel,
@@ -84,10 +105,17 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val favoriteIds by viewModel.favoriteIdsSet.collectAsState()
     val fontSize by viewModel.fontSize.collectAsState()
     val overlayEnabled by viewModel.overlayEnabled.collectAsState()
     val hasOverlayPermission = UnlockOverlayManager.canDrawOverlays(context)
+
+    val dailyUnlockCount by viewModel.prefs.dailyUnlockCount.collectAsState()
+    val dailyTasbeehCount by viewModel.prefs.dailyTasbeehCount.collectAsState()
+
+    var activeMood by remember { mutableStateOf<SpiritualMood?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val approvedVerses by viewModel.approvedVerses.collectAsState()
     val approvedHadiths by viewModel.approvedHadiths.collectAsState()
@@ -100,18 +128,24 @@ fun HomeScreen(
     val dailyHadith = approvedHadiths.firstOrNull()
     val dailyDhikr = approvedDhikr.firstOrNull()
 
+    // Daily Jabr Al-Khatir reflection pinned for today
+    val todayJabr = remember { JabrKhatirManager.getTodayJabrKhatir() }
+
+    // Seasonal Fasting Eve Occasion (active 19:00 PM to Fajr 04:00 AM)
+    val fastingOccasion = remember { FastingReminderManager.getActiveFastingOccasion(context) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .testTag("home_screen"),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        // Hero Header Section with subtle Islamic Pattern & Tagline
+        // Hero Header Section with Liquid Glass & Header Shortcuts (Favorites & Settings)
         item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(235.dp)
+                    .height(245.dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.bg_islamic_pattern_1794331942075),
@@ -125,17 +159,68 @@ fun HomeScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    AtharDeepGreen.copy(alpha = 0.5f),
-                                    AtharDeepGreen.copy(alpha = 0.88f),
+                                    AtharDeepGreen.copy(alpha = 0.55f),
+                                    AtharDeepGreen.copy(alpha = 0.90f),
                                     MaterialTheme.colorScheme.background
                                 )
                             )
                         )
                 )
+
+                // Top Floating Glass Icons (Favorites & Settings)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Settings Glass Button
+                    Surface(
+                        shape = CircleShape,
+                        color = AtharGlassSecondary,
+                        border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clickable { onNavigate(AtharDestination.Settings) }
+                            .testTag("home_top_settings_button")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "الإعدادات",
+                                tint = AtharGold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Favorites Glass Button
+                    Surface(
+                        shape = CircleShape,
+                        color = AtharGlassSecondary,
+                        border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clickable { onNavigate(AtharDestination.Favorites) }
+                            .testTag("home_top_favorites_button")
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Bookmark,
+                                contentDescription = "المفضلة",
+                                tint = AtharGold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Center Branding
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                        .padding(top = 28.dp, bottom = 12.dp, start = 20.dp, end = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -147,7 +232,7 @@ fun HomeScreen(
                             shape = CircleShape,
                             color = Color.Transparent,
                             border = BorderStroke(1.5.dp, AtharGold),
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.size(52.dp)
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_athar_icon_1794331926985),
@@ -180,15 +265,15 @@ fun HomeScreen(
                     // App Mottos
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = AtharSecondaryGreen.copy(alpha = 0.85f),
-                        border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.4f))
+                        color = AtharSecondaryGreen.copy(alpha = 0.88f),
+                        border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.45f))
                     ) {
                         Text(
                             text = "«افتح هاتفك على ما ينفع قلبك»",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontFamily = AmiriQuranFont,
                                 color = AtharGoldLight,
-                                fontSize = 19.sp,
+                                fontSize = 18.5.sp,
                                 fontWeight = FontWeight.SemiBold
                             ),
                             modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
@@ -221,6 +306,164 @@ fun HomeScreen(
             }
         }
 
+        // Section: Daily Fajr "Jabr Al-Khatir" Pinned Glass Card (بشارة فجرية 🌿 | جبر خاطر)
+        item {
+            Card(
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = AtharGlassDarkGreen
+                ),
+                border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .testTag("home_jabr_khatir_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp)
+                ) {
+                    // Header Row with Badge & Image Share Action
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = AtharGold.copy(alpha = 0.2f),
+                            border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.WbSunny,
+                                    contentDescription = null,
+                                    tint = AtharGold,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "بشارة فجرية 🌿 | جبر خاطر",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = AtharGold
+                                    )
+                                )
+                            }
+                        }
+
+                        // Share as Image Action Button
+                        Surface(
+                            shape = CircleShape,
+                            color = AtharGold.copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, AtharGold),
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        ShareImageHelper.shareCardAsImage(
+                                            context = context,
+                                            badgeText = "بشارة فجرية 🌿 | جبر خاطر",
+                                            mainText = todayJabr.ayahText,
+                                            referenceText = todayJabr.surahAndVerse,
+                                            benefitOrReflection = todayJabr.reflection
+                                        )
+                                    }
+                                }
+                                .testTag("jabr_share_image_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.Image,
+                                    contentDescription = "مشاركة كصورة",
+                                    tint = AtharGold,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Ayah Scripture
+                    Text(
+                        text = "«${todayJabr.ayahText}»",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = AmiriQuranFont,
+                            fontSize = (21 * fontSize.scaleFactor).sp,
+                            color = AtharGoldLight,
+                            textAlign = TextAlign.Center,
+                            lineHeight = (32 * fontSize.scaleFactor).sp
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = todayJabr.surahAndVerse,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = AtharIvory.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Reflection Box
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0x30102D25),
+                        border = BorderStroke(0.8.dp, AtharGold.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "💡 ${todayJabr.reflection}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = AtharIvory,
+                                lineHeight = 19.sp,
+                                fontSize = 12.5.sp
+                            ),
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section: Seasonal Fasting Eve Reminder (if active)
+        if (fastingOccasion != null) {
+            item {
+                FastingBannerCard(
+                    occasion = fastingOccasion,
+                    onCopy = { text -> viewModel.copyToClipboard(context, text) },
+                    onShare = { text, ref -> viewModel.shareContent(context, fastingOccasion.title, text, ref) },
+                    fontSizeMultiplier = fontSize.scaleFactor
+                )
+            }
+        }
+
+        // Section: "بماذا تشعر الآن؟" (Interactive Mood & Spiritual Guidance)
+        item {
+            MoodSelectorCard(
+                onSelectMood = { activeMood = it }
+            )
+        }
+
+        // Section: Daily Spiritual Impact Card
+        item {
+            DailyImpactCard(
+                unlockCount = dailyUnlockCount,
+                tasbeehCount = dailyTasbeehCount
+            )
+        }
+
         // Section: Floating Popup Status & Quick Toggle Card
         item {
             Card(
@@ -228,7 +471,7 @@ fun HomeScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                border = BorderStroke(1.2.dp, com.example.ui.theme.AtharGlassBorderBrush),
+                border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -386,6 +629,17 @@ fun HomeScreen(
                                             dailyAyah.textUthmani,
                                             "${dailyAyah.surahName}: ${dailyAyah.verseNumber}"
                                         )
+                                    },
+                                    onShareImage = {
+                                        coroutineScope.launch {
+                                            ShareImageHelper.shareCardAsImage(
+                                                context = context,
+                                                badgeText = "${dailyAyah.surahName} (الآية ${dailyAyah.verseNumber})",
+                                                mainText = dailyAyah.textUthmani,
+                                                referenceText = "${dailyAyah.surahName}: ${dailyAyah.verseNumber}",
+                                                benefitOrReflection = dailyAyah.tafsirSnippet
+                                            )
+                                        }
                                     }
                                 )
                             } else {
@@ -418,6 +672,17 @@ fun HomeScreen(
                                             dailyHadith.arabicText,
                                             "${dailyHadith.collectionName} - رقم ${dailyHadith.hadithNumber}"
                                         )
+                                    },
+                                    onShareImage = {
+                                        coroutineScope.launch {
+                                            ShareImageHelper.shareCardAsImage(
+                                                context = context,
+                                                badgeText = "${dailyHadith.collectionName} - رقم ${dailyHadith.hadithNumber}",
+                                                mainText = dailyHadith.arabicText,
+                                                referenceText = dailyHadith.chapterName,
+                                                benefitOrReflection = dailyHadith.benefit
+                                            )
+                                        }
                                     }
                                 )
                             } else {
@@ -450,6 +715,17 @@ fun HomeScreen(
                                             dailyDhikr.arabicText,
                                             "${dailyDhikr.sourceBook} (${dailyDhikr.reference})"
                                         )
+                                    },
+                                    onShareImage = {
+                                        coroutineScope.launch {
+                                            ShareImageHelper.shareCardAsImage(
+                                                context = context,
+                                                badgeText = dailyDhikr.category,
+                                                mainText = dailyDhikr.arabicText,
+                                                referenceText = "${dailyDhikr.sourceBook} (${dailyDhikr.reference})",
+                                                benefitOrReflection = dailyDhikr.virtue
+                                            )
+                                        }
                                     }
                                 )
                             } else {
@@ -524,7 +800,10 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(CircleShape)
-                            .clickable { quickCounter++ },
+                            .clickable {
+                                quickCounter++
+                                viewModel.prefs.incrementDailyTasbeehCount(1)
+                            },
                         color = AtharGold,
                         shape = CircleShape,
                         border = BorderStroke(2.dp, AtharIvory)
@@ -555,7 +834,7 @@ fun HomeScreen(
             }
         }
 
-        // Section: Main Navigation Grid
+        // Section: Main Navigation Grid (with wrapContentHeight to prevent text clipping)
         item {
             Spacer(modifier = Modifier.height(22.dp))
             Column(
@@ -601,7 +880,7 @@ fun HomeScreen(
                 ) {
                     NavGridCard(
                         title = "الأذكار والأدعية",
-                        subtitle = "١٨ قسماً من حصن المسلم",
+                        subtitle = "حصن المسلم وأدعية القرآن والسنة",
                         icon = Icons.Filled.VolunteerActivism,
                         onClick = { onNavigate(AtharDestination.Adhkar) },
                         modifier = Modifier.weight(1f)
@@ -638,6 +917,18 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    // Modal Bottom Sheet for Spiritual Mood Guidance
+    if (activeMood != null) {
+        MoodGuidanceSheet(
+            mood = activeMood!!,
+            sheetState = sheetState,
+            onDismiss = { activeMood = null },
+            onCopy = { text -> viewModel.copyToClipboard(context, text) },
+            onShare = { text, ref -> viewModel.shareContent(context, "تذكير إيماني", text, ref) },
+            fontSizeMultiplier = fontSize.scaleFactor
+        )
     }
 }
 
@@ -711,7 +1002,7 @@ private fun NavGridCard(
 ) {
     Card(
         modifier = modifier
-            .height(105.dp)
+            .wrapContentHeight()
             .clickable(onClick = onClick)
             .testTag("nav_card_$title"),
         shape = RoundedCornerShape(16.dp),
@@ -722,9 +1013,9 @@ private fun NavGridCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -757,10 +1048,12 @@ private fun NavGridCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 11.sp,
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    maxLines = 1
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

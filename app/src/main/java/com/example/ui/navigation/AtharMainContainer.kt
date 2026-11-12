@@ -8,11 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,8 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.LayoutDirection
@@ -34,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AtharThemeMode
 import com.example.overlay.DevicePermissionHelper
+import com.example.ui.components.FloatingTasbeehBubble
 import com.example.ui.screens.AdhkarScreen
 import com.example.ui.screens.AllContentScreen
 import com.example.ui.screens.FavoritesScreen
@@ -49,7 +48,6 @@ import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharTheme
 import com.example.ui.viewmodel.AtharDestination
 import com.example.ui.viewmodel.AtharViewModel
-import androidx.compose.ui.platform.LocalContext
 
 data class BottomNavItem(
     val destination: AtharDestination,
@@ -75,14 +73,11 @@ fun AtharMainContainer(
     // Full RTL support guaranteed
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         AtharTheme(darkTheme = isDark) {
+            // Simplified 3-tab Bottom Navigation
             val navItems = listOf(
                 BottomNavItem(AtharDestination.Home, Icons.Filled.Home, "الرئيسية"),
-                BottomNavItem(AtharDestination.Quran, Icons.AutoMirrored.Filled.MenuBook, "القرآن"),
-                BottomNavItem(AtharDestination.Hadith, Icons.Filled.FormatQuote, "الحديث"),
-                BottomNavItem(AtharDestination.Adhkar, Icons.Filled.VolunteerActivism, "الأذكار"),
-                BottomNavItem(AtharDestination.AllContent, Icons.Filled.AutoAwesome, "كل المحتوى"),
-                BottomNavItem(AtharDestination.Favorites, Icons.Filled.Bookmark, "المفضلة"),
-                BottomNavItem(AtharDestination.Settings, Icons.Filled.Settings, "الإعدادات")
+                BottomNavItem(AtharDestination.Quran, Icons.AutoMirrored.Filled.MenuBook, "القرآن الكريم"),
+                BottomNavItem(AtharDestination.Adhkar, Icons.Filled.VolunteerActivism, "الأذكار والأدعية")
             )
 
             // Android Back button handling
@@ -130,7 +125,7 @@ fun AtharMainContainer(
                                     label = {
                                         Text(
                                             text = item.label,
-                                            fontSize = 10.5.sp,
+                                            fontSize = 11.5.sp,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     },
@@ -210,6 +205,13 @@ fun AtharMainContainer(
                                 }
                             }
                         }
+
+                        // Floating Smart Tasbeeh Bubble on screen edge
+                        FloatingTasbeehBubble(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 76.dp, end = 16.dp)
+                        )
                     }
                 }
             }

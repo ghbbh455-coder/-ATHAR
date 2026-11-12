@@ -275,6 +275,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
     val showHadithInOverlay: StateFlow<Boolean> = prefs.showHadithInOverlay
     val showDhikrInOverlay: StateFlow<Boolean> = prefs.showDhikrInOverlay
     val showDuaInOverlay: StateFlow<Boolean> = prefs.showDuaInOverlay
+    val fastingRemindersEnabled: StateFlow<Boolean> = prefs.fastingRemindersEnabled
 
     init {
         // Ensure initial offline seed package is inserted in Room on launch
@@ -362,6 +363,10 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setShowTashkeel(show: Boolean) {
         prefs.setShowTashkeel(show)
+    }
+
+    fun setFastingRemindersEnabled(enabled: Boolean) {
+        prefs.setFastingRemindersEnabled(enabled)
     }
 
     fun setOverlayEnabled(context: Context, enabled: Boolean) {

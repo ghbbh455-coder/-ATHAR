@@ -58,6 +58,17 @@ class AtharPreferences(context: Context) {
     private val _lastOverlayTimestamp = MutableStateFlow(loadLastOverlayTimestamp())
     val lastOverlayTimestamp: StateFlow<Long> = _lastOverlayTimestamp.asStateFlow()
 
+    // Daily Spiritual Impact Tracking
+    private val _dailyUnlockCount = MutableStateFlow(loadDailyUnlockCount())
+    val dailyUnlockCount: StateFlow<Int> = _dailyUnlockCount.asStateFlow()
+
+    private val _dailyTasbeehCount = MutableStateFlow(loadDailyTasbeehCount())
+    val dailyTasbeehCount: StateFlow<Int> = _dailyTasbeehCount.asStateFlow()
+
+    // Fasting Reminders Preference
+    private val _fastingRemindersEnabled = MutableStateFlow(loadBoolean(KEY_FASTING_REMINDERS_ENABLED, true))
+    val fastingRemindersEnabled: StateFlow<Boolean> = _fastingRemindersEnabled.asStateFlow()
+
     private fun loadFavoriteIds(): Set<String> {
         return prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
     }
@@ -247,6 +258,46 @@ class AtharPreferences(context: Context) {
         prefs.edit().putInt("quran_last_read_page", page).apply()
     }
 
+    // Daily Fajr "Jabr Al-Khatir" Preference
+    fun getLastJabrKhatirDate(): String = prefs.getString("key_last_jabr_khatir_date", "") ?: ""
+
+    fun setLastJabrKhatirDate(date: String) {
+        prefs.edit().putString("key_last_jabr_khatir_date", date).apply()
+    }
+
+    // Smart Floating Tasbeeh Preferences
+    fun getFloatingTasbeehCount(dhikrKey: String): Int = prefs.getInt("tasbeeh_count_$dhikrKey", 0)
+
+    fun setFloatingTasbeehCount(dhikrKey: String, count: Int) {
+        prefs.edit().putInt("tasbeeh_count_$dhikrKey", count).apply()
+    }
+
+    fun getSelectedTasbeehIndex(): Int = prefs.getInt("tasbeeh_selected_index", 0)
+
+    fun setSelectedTasbeehIndex(index: Int) {
+        prefs.edit().putInt("tasbeeh_selected_index", index).apply()
+    }
+
+    fun isFloatingTasbeehEnabled(): Boolean = prefs.getBoolean("key_floating_tasbeeh_enabled", true)
+
+    fun setFloatingTasbeehEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("key_floating_tasbeeh_enabled", enabled).apply()
+    }
+
+    // Fasting Reminder Preferences
+    fun isFastingRemindersEnabled(): Boolean = prefs.getBoolean(KEY_FASTING_REMINDERS_ENABLED, true)
+
+    fun setFastingRemindersEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FASTING_REMINDERS_ENABLED, enabled).apply()
+        _fastingRemindersEnabled.value = enabled
+    }
+
+    fun getLastFastingReminderShownDate(): String = prefs.getString(KEY_LAST_FASTING_REMINDER_DATE, "") ?: ""
+
+    fun setLastFastingReminderShownDate(dateStr: String) {
+        prefs.edit().putString(KEY_LAST_FASTING_REMINDER_DATE, dateStr).apply()
+    }
+
     private fun loadBoolean(key: String, default: Boolean): Boolean {
         return prefs.getBoolean(key, default)
     }
@@ -286,9 +337,53 @@ class AtharPreferences(context: Context) {
         return elapsed >= 3_000L
     }
 
+    private fun getTodayDateString(): String {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        return sdf.format(java.util.Date())
+    }
+
+    private fun checkAndResetDailyImpact() {
+        val today = getTodayDateString()
+        val lastDate = prefs.getString(KEY_DAILY_IMPACT_DATE, "") ?: ""
+        if (lastDate != today) {
+            prefs.edit()
+                .putString(KEY_DAILY_IMPACT_DATE, today)
+                .putInt(KEY_DAILY_UNLOCK_COUNT, 0)
+                .putInt(KEY_DAILY_TASBEEH_COUNT, 0)
+                .apply()
+            _dailyUnlockCount.value = 0
+            _dailyTasbeehCount.value = 0
+        }
+    }
+
+    private fun loadDailyUnlockCount(): Int {
+        checkAndResetDailyImpact()
+        return prefs.getInt(KEY_DAILY_UNLOCK_COUNT, 0)
+    }
+
+    private fun loadDailyTasbeehCount(): Int {
+        checkAndResetDailyImpact()
+        return prefs.getInt(KEY_DAILY_TASBEEH_COUNT, 0)
+    }
+
+    fun incrementDailyUnlockCount() {
+        checkAndResetDailyImpact()
+        val newCount = _dailyUnlockCount.value + 1
+        prefs.edit().putInt(KEY_DAILY_UNLOCK_COUNT, newCount).apply()
+        _dailyUnlockCount.value = newCount
+    }
+
+    fun incrementDailyTasbeehCount(amount: Int = 1) {
+        checkAndResetDailyImpact()
+        val newCount = _dailyTasbeehCount.value + amount
+        prefs.edit().putInt(KEY_DAILY_TASBEEH_COUNT, newCount).apply()
+        _dailyTasbeehCount.value = newCount
+    }
+
     fun recordOverlayShown(timestamp: Long = System.currentTimeMillis()) {
         prefs.edit().putLong(KEY_LAST_OVERLAY_TIMESTAMP, timestamp).apply()
         _lastOverlayTimestamp.value = timestamp
+        incrementDailyUnlockCount()
     }
 
     // Smart Local Rotation: Track shown IDs to prevent immediate repeats until list is exhausted
@@ -360,5 +455,10 @@ class AtharPreferences(context: Context) {
         private const val KEY_WIDGET_REF = "pref_widget_ref"
         private const val KEY_WIDGET_IS_FAV = "pref_widget_is_fav"
         private const val KEY_PERMISSIONS_ONBOARDING_COMPLETED = "pref_permissions_onboarding_completed"
+        private const val KEY_DAILY_IMPACT_DATE = "pref_daily_impact_date"
+        private const val KEY_DAILY_UNLOCK_COUNT = "pref_daily_unlock_count"
+        private const val KEY_DAILY_TASBEEH_COUNT = "pref_daily_tasbeeh_count"
+        private const val KEY_FASTING_REMINDERS_ENABLED = "pref_fasting_reminders_enabled"
+        private const val KEY_LAST_FASTING_REMINDER_DATE = "pref_last_fasting_reminder_date"
     }
 }

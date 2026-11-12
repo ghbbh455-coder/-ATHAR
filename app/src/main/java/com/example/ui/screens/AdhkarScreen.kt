@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,8 +37,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.model.ContentType
 import com.example.ui.components.AtharCard
 import com.example.ui.components.AtharTopBar
@@ -53,6 +57,13 @@ import com.example.ui.theme.AtharDeepGreen
 import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharIvory
 import com.example.ui.viewmodel.AtharViewModel
+import com.example.util.ShareImageHelper
+import kotlinx.coroutines.launch
+
+data class MainAdhkarTab(
+    val title: String,
+    val filterPredicate: (String) -> Boolean
+)
 
 @Composable
 fun AdhkarScreen(
@@ -61,49 +72,67 @@ fun AdhkarScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val selectedCategory by viewModel.selectedDhikrCategory.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
     val counters by viewModel.dhikrCounters.collectAsState()
     val favoriteIds by viewModel.favoriteIdsSet.collectAsState()
     val fontSize by viewModel.fontSize.collectAsState()
     val approvedDhikr by viewModel.approvedDhikr.collectAsState()
+
+    var selectedMainTabIndex by remember { mutableIntStateOf(0) }
+    var selectedSubCategory by remember { mutableStateOf<String?>(null) }
     var dhikrSearchQuery by remember { mutableStateOf("") }
 
-    val default18Categories = listOf(
-        "أذكار الصباح",
-        "أذكار المساء",
-        "أذكار النوم",
-        "أذكار الاستيقاظ",
-        "أذكار بعد الصلاة",
-        "أذكار دخول وخروج المنزل",
-        "أذكار المسجد",
-        "أذكار الطعام والشراب",
-        "أذكار السفر",
-        "أذكار الكرب والهم",
-        "أذكار الاستغفار والتوبة",
-        "أذكار التسبيح والحمد",
-        "أدعية من القرآن الكريم",
-        "أدعية الأنبياء عليهم السلام",
-        "أدعية من السنة النبوية",
-        "أذكار الوضوء",
-        "أدعية الرزق والبركة",
-        "أذكار وأدعية متنوعة"
-    )
-
-    val categories = remember(approvedDhikr) {
-        val list = approvedDhikr.map { it.category }.distinct()
-        if (list.isEmpty()) default18Categories else list
+    // 5 Main Comprehensive Tabs
+    val mainTabs = remember {
+        listOf(
+            MainAdhkarTab("أذكار اليوم والمساء") { cat ->
+                cat.contains("صباح") || cat.contains("مساء") || cat.contains("نوم") ||
+                        cat.contains("استيقاظ") || cat.contains("صلاة") || cat.contains("مسجد") ||
+                        cat.contains("منزل") || cat.contains("وضوء")
+            },
+            MainAdhkarTab("أدعية القرآن الكريم") { cat ->
+                cat.contains("القرآن") || cat.contains("قرآن")
+            },
+            MainAdhkarTab("أدعية السنة النبوية") { cat ->
+                cat.contains("السنة") || cat.contains("سنة") || cat.contains("مأثور")
+            },
+            MainAdhkarTab("أدعية الأنبياء") { cat ->
+                cat.contains("أنبياء") || cat.contains("الأنبياء")
+            },
+            MainAdhkarTab("جوامع وتفريج الكرب") { cat ->
+                cat.contains("كرب") || cat.contains("هم") || cat.contains("رزق") ||
+                        cat.contains("استغفار") || cat.contains("تسبيح") || cat.contains("توبة") ||
+                        cat.contains("متنوعة")
+            }
+        )
     }
 
-    val filteredAdhkar = remember(approvedDhikr, selectedCategory, dhikrSearchQuery) {
+    val currentTab = mainTabs[selectedMainTabIndex.coerceIn(0, mainTabs.lastIndex)]
+
+    // All distinct categories matching the active tab
+    val availableSubCategories = remember(approvedDhikr, selectedMainTabIndex) {
+        approvedDhikr
+            .filter { currentTab.filterPredicate(it.category) }
+            .map { it.category }
+            .distinct()
+    }
+
+    val filteredAdhkar = remember(approvedDhikr, selectedMainTabIndex, selectedSubCategory, dhikrSearchQuery) {
         approvedDhikr.filter { item ->
-            val matchesCategory = if (dhikrSearchQuery.isNotBlank()) true else item.category == selectedCategory
             val matchesQuery = if (dhikrSearchQuery.isBlank()) true else {
                 item.arabicText.contains(dhikrSearchQuery, ignoreCase = true) ||
                         item.category.contains(dhikrSearchQuery, ignoreCase = true) ||
                         item.virtue.contains(dhikrSearchQuery, ignoreCase = true) ||
                         item.sourceBook.contains(dhikrSearchQuery, ignoreCase = true)
             }
-            matchesCategory && matchesQuery
+
+            if (dhikrSearchQuery.isNotBlank()) {
+                matchesQuery
+            } else {
+                val matchesTab = currentTab.filterPredicate(item.category)
+                val matchesSub = selectedSubCategory == null || item.category == selectedSubCategory
+                matchesTab && matchesSub
+            }
         }
     }
 
@@ -113,18 +142,56 @@ fun AdhkarScreen(
             .testTag("adhkar_screen")
     ) {
         AtharTopBar(
-            title = "الأذكار والأدعية النبوية (١٨ قسماً)",
+            title = "الأذكار والأدعية الجامعة",
             canNavigateBack = true,
             onNavigateBack = onNavigateBack
         )
 
-        // Search in Adhkar
+        // 5 Primary Smooth Tabs
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            itemsIndexed(mainTabs) { index, tab ->
+                val isSelected = index == selectedMainTabIndex
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) AtharGold else MaterialTheme.colorScheme.surfaceVariant,
+                    border = BorderStroke(
+                        1.dp,
+                        if (isSelected) AtharGold else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    ),
+                    modifier = Modifier
+                        .height(38.dp)
+                        .clickable {
+                            selectedMainTabIndex = index
+                            selectedSubCategory = null
+                            dhikrSearchQuery = ""
+                        }
+                        .testTag("adhkar_main_tab_$index")
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 14.dp)) {
+                        Text(
+                            text = tab.title,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) AtharDeepGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // Search Bar
         OutlinedTextField(
             value = dhikrSearchQuery,
             onValueChange = { dhikrSearchQuery = it },
             placeholder = {
                 Text(
-                    text = "ابحث في الأذكار والأدعية أو الفضائل...",
+                    text = "ابحث في الأدعية، الأذكار أو الفضائل...",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -156,55 +223,84 @@ fun AdhkarScreen(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
                 .testTag("adhkar_search_field")
         )
 
-        // Categories Scrollable Row (18 categories)
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(categories) { category ->
-                val isSelected = selectedCategory == category && dhikrSearchQuery.isBlank()
-                FilterChip(
-                    selected = isSelected,
-                    onClick = {
-                        dhikrSearchQuery = ""
-                        viewModel.selectDhikrCategory(category)
-                    },
-                    label = {
-                        Text(
-                            text = category,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        // Sub-categories Chips (if more than 1 category in tab and not searching)
+        if (availableSubCategories.size > 1 && dhikrSearchQuery.isBlank()) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                item {
+                    val isAll = selectedSubCategory == null
+                    FilterChip(
+                        selected = isAll,
+                        onClick = { selectedSubCategory = null },
+                        label = {
+                            Text(
+                                text = "الكل",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isAll) FontWeight.Bold else FontWeight.Normal
+                                )
                             )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AtharGold.copy(alpha = 0.25f),
+                            selectedLabelColor = AtharGold,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isAll,
+                            borderColor = if (isAll) AtharGold else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            selectedBorderColor = AtharGold
                         )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AtharGold,
-                        selectedLabelColor = AtharDeepGreen,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        borderColor = if (isSelected) AtharGold else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                        selectedBorderColor = AtharGold
                     )
-                )
+                }
+
+                items(availableSubCategories) { cat ->
+                    val isSelected = selectedSubCategory == cat
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            selectedSubCategory = if (selectedSubCategory == cat) null else cat
+                        },
+                        label = {
+                            Text(
+                                text = cat,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AtharGold.copy(alpha = 0.25f),
+                            selectedLabelColor = AtharGold,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = if (isSelected) AtharGold else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            selectedBorderColor = AtharGold
+                        )
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Adhkar List from Room Database
+        // Adhkar Cards List
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(filteredAdhkar, key = { it.id }) { dhikr ->
@@ -235,6 +331,17 @@ fun AdhkarScreen(
                             dhikr.arabicText,
                             "${dhikr.sourceBook} (${dhikr.reference})"
                         )
+                    },
+                    onShareImage = {
+                        coroutineScope.launch {
+                            ShareImageHelper.shareCardAsImage(
+                                context = context,
+                                badgeText = dhikr.category,
+                                mainText = dhikr.arabicText,
+                                referenceText = "${dhikr.sourceBook} (${dhikr.reference})",
+                                benefitOrReflection = dhikr.virtue
+                            )
+                        }
                     },
                     extraContent = {
                         // Interactive Tasbih Counter Control
