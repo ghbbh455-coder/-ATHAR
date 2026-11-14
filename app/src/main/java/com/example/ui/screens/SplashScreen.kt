@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,13 +49,11 @@ import com.example.ui.theme.AmiriQuranFont
 import com.example.ui.theme.AtharDeepGreen
 import com.example.ui.theme.AtharGlassBorder
 import com.example.ui.theme.AtharGlassBorderHighlight
-import com.example.ui.theme.AtharGlassDarkGreen
-import com.example.ui.theme.AtharGlassSecondary
-import com.example.ui.theme.AtharGlassShadow
 import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharSecondaryGreen
 import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.rememberLiquidGlassBrush
 import kotlinx.coroutines.delay
 
 @Composable
@@ -114,25 +111,13 @@ fun SplashScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                val logoGlassBrush = rememberLiquidGlassBrush()
                 // Liquid Glass Logo Emblem Container
                 Box(
                     modifier = Modifier
                         .size(140.dp)
-                        .shadow(
-                            elevation = 24.dp,
-                            shape = CircleShape,
-                            spotColor = AtharGlassShadow,
-                            ambientColor = AtharGlassShadow
-                        )
                         .clip(CircleShape)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    AtharGlassDarkGreen,
-                                    AtharGlassSecondary
-                                )
-                            )
-                        )
+                        .background(brush = logoGlassBrush)
                         .padding(3.dp),
                     contentAlignment = Alignment.Center
                 ) {

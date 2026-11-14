@@ -165,7 +165,7 @@ class UnlockOverlayService : Service() {
     }
 
     /**
-     * Handles unlock event with 2000ms in-memory debounce.
+     * Handles unlock event with 1500ms in-memory debounce only (no frequency counters or cooldowns).
      * Uses preloaded item if available for 0ms instant display, and never drops an unlock event
      * even if an old overlay was still attached (UnlockOverlayManager replaces it cleanly).
      */
@@ -487,7 +487,7 @@ class UnlockOverlayService : Service() {
         const val EXTRA_TRIGGER_NOW = "extra_trigger_now"
         private const val CHANNEL_ID = "athar_unlock_overlay_channel"
         private const val NOTIFICATION_ID = 1001
-        private const val DEBOUNCE_TIME_MS = 2000L
+        private const val DEBOUNCE_TIME_MS = 1500L
         private const val PRELOAD_TTL_MS = 120_000L
 
         @Volatile

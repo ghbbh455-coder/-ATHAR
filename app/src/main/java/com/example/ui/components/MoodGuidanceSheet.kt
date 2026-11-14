@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,8 @@ import com.example.ui.theme.AtharGoldLight
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharIvoryDark
 import com.example.ui.theme.AtharSecondaryGreen
+import com.example.ui.theme.LiquidGlassDefaults
+import com.example.ui.theme.rememberLiquidGlassBrush
 import com.example.util.ShareImageHelper
 import kotlinx.coroutines.launch
 
@@ -225,11 +228,12 @@ fun MoodSelectorCard(
     onSelectMood: (SpiritualMood) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val glassBrush = rememberLiquidGlassBrush()
     Card(
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = AtharGlassDarkGreen),
-        border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = BorderStroke(1.dp, LiquidGlassDefaults.ThinGoldBorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -238,6 +242,7 @@ fun MoodSelectorCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(brush = glassBrush)
                 .padding(18.dp)
         ) {
             Row(
@@ -455,7 +460,8 @@ fun MoodGuidanceSheet(
                     Card(
                         shape = RoundedCornerShape(22.dp),
                         colors = CardDefaults.cardColors(containerColor = AtharGlassSecondary),
-                        border = BorderStroke(1.2.dp, AtharGlassBorder),
+                        border = BorderStroke(1.dp, LiquidGlassDefaults.ThinGoldBorderColor),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(

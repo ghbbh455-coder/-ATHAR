@@ -21,8 +21,8 @@ import androidx.compose.ui.unit.dp
  * for smooth 120fps scrolling across all screens.
  */
 object LiquidGlassDefaults {
-    val DeepGreenGlass = Color(0xD9102D25)       // #102D25 at 0.85f alpha
-    val SecondaryGreenGlass = Color(0xD9244638)  // #244638 at 0.85f alpha
+    val DeepGreenGlass = Color(0xE0102D25)       // #102D25 at 0.88f alpha
+    val SecondaryGreenGlass = Color(0xE0244638)  // #244638 at 0.88f alpha
     val ThinGoldBorderColor = Color(0x4DD6BC82)  // #D6BC82 at 0.30f alpha
     val ThinGoldBorder = BorderStroke(1.dp, ThinGoldBorderColor)
     val CardShape = RoundedCornerShape(24.dp)

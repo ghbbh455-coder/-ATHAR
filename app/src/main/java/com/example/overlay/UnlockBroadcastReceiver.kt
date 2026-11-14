@@ -75,7 +75,7 @@ class UnlockBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "UnlockBroadcastReceiver"
-        private const val RECEIVER_DEBOUNCE_MS = 2000L
+        private const val RECEIVER_DEBOUNCE_MS = 1500L
 
         @Volatile
         private var lastReceiverTimestamp: Long = 0L

@@ -334,8 +334,8 @@ class AtharPreferences(context: Context) {
         if (last <= 0L) return true
 
         val elapsed = currentTimeMillis - last
-        // Debounce of 2 seconds only to prevent multiple callbacks during a single unlock
-        return elapsed >= 2_000L
+        // Debounce of 1.5 seconds only to prevent duplicate callbacks during a single unlock
+        return elapsed >= 1_500L
     }
 
     private fun getTodayDateString(): String {

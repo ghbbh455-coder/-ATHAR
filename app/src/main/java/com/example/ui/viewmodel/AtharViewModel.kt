@@ -202,7 +202,7 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
             }
             matchesFilter && matchesQuery
         }
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Favorites mapped to full UI display items offline
@@ -263,12 +263,12 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (filter == null) list else list.filter { it.type == filter }
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteIdsSet: StateFlow<Set<String>> = rawFavorites.combine(prefs.favoriteIds) { dbFavs, prefFavs ->
         dbFavs.map { it.contentId }.toSet() + prefFavs
-    }.flowOn(Dispatchers.Default)
+    }.flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val themeMode: StateFlow<AtharThemeMode> = prefs.themeMode

@@ -35,8 +35,8 @@ val AtharTextLightPrimary = Color(0xFF102D25)
 val AtharTextLightSecondary = Color(0xFF3B564C)
 
 // Liquid Glass & Glassmorphism Colors (Athar Overlay & Cards)
-val AtharGlassDarkGreen = Color(0xD9102D25)     // 85% opacity deep green (#102D25)
-val AtharGlassSecondary = Color(0xD9244638)     // 85% opacity secondary green (#244638)
+val AtharGlassDarkGreen = Color(0xE0102D25)     // 88% opacity deep green (#102D25)
+val AtharGlassSecondary = Color(0xE0244638)     // 88% opacity secondary green (#244638)
 val AtharGlassBorder = Color(0x4DD6BC82)        // Thin radiant golden border (0x4DD6BC82)
 val AtharGlassBorderHighlight = Color(0x80D6BC82)
 val AtharGlassButtonBg = Color(0x26F5F0E6)      // 15% opacity ivory glass button
@@ -47,6 +47,6 @@ val AtharGlassBorderBrush = Brush.linearGradient(
     listOf(Color(0x66D6BC82), Color(0x26D6BC82))
 )
 val AtharGlassCardGradient = Brush.verticalGradient(
-    listOf(Color(0xD9102D25), Color(0xD9244638))
+    listOf(Color(0xE0102D25), Color(0xE0244638))
 )
 

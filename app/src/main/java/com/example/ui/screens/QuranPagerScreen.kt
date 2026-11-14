@@ -63,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -79,6 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -402,7 +404,7 @@ private fun MedinaMushafPageView(
                 } else {
                     RenderMushafPageContent(
                         pageNumber = pageNumber,
-                        ayahs = pageData.ayahs,
+                        pageData = pageData,
                         textColor = textColor,
                         isIvoryMode = isIvoryMode
                     )
@@ -481,51 +483,41 @@ private fun MedinaMushafPageView(
     }
 }
 
+@Immutable
+private data class MushafPageBlock(
+    val surahHeader: SurahMetadata?,
+    val showBasmala: Boolean,
+    val formattedText: AnnotatedString
+)
+
 /**
- * Renders Surah opening banners, Basmala, and continuous Uthmani verses for the page
+ * Renders Surah opening banners, Basmala, and continuous Uthmani verses for the page.
+ * All verse formatting and block grouping is cached per (pageData, isIvoryMode) to ensure
+ * zero allocations during horizontal swipes at 120fps.
  */
 @Composable
 private fun RenderMushafPageContent(
     pageNumber: Int,
-    ayahs: List<QuranPageAyah>,
+    pageData: QuranPage,
     textColor: Color,
     isIvoryMode: Boolean
 ) {
-    var i = 0
-    while (i < ayahs.size) {
-        val ayah = ayahs[i]
+    val verseMarkerColor = if (isIvoryMode) AtharGoldDark else AtharGold
+    val blocks = remember(pageData, verseMarkerColor) {
+        val ayahs = pageData.ayahs
+        val result = ArrayList<MushafPageBlock>(4)
+        var i = 0
+        while (i < ayahs.size) {
+            val ayah = ayahs[i]
+            val header = if (ayah.isNewSurah) QuranSurahCatalog.getSurahByNumber(ayah.surah) else null
+            val showBasmala = header != null && header.number != 1 && header.number != 9
 
-        if (ayah.isNewSurah) {
-            val surah = QuranSurahCatalog.getSurahByNumber(ayah.surah)
-            if (surah != null) {
-                SurahHeaderBanner(
-                    surah = surah,
-                    isIvoryMode = isIvoryMode
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Basmala (Every Surah except Surah 9 At-Tawbah and Surah 1 where it's ayah 1)
-                if (surah.number != 1 && surah.number != 9) {
-                    BasmalaBanner(isIvoryMode = isIvoryMode)
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
-            }
-        }
-
-        // Group consecutive ayahs of the same Surah block into a paragraph
-        val currentSurah = ayah.surah
-        val blockAyahs = mutableListOf<QuranPageAyah>()
-        while (i < ayahs.size && ayahs[i].surah == currentSurah && (blockAyahs.isEmpty() || !ayahs[i].isNewSurah)) {
-            blockAyahs.add(ayahs[i])
-            i++
-        }
-
-        val verseMarkerColor = if (isIvoryMode) AtharGoldDark else AtharGold
-        val formattedText = remember(blockAyahs, verseMarkerColor) {
-            buildAnnotatedString {
-                blockAyahs.forEach { item ->
+            val currentSurah = ayah.surah
+            val formatted = buildAnnotatedString {
+                var isFirstInBlock = true
+                while (i < ayahs.size && ayahs[i].surah == currentSurah && (isFirstInBlock || !ayahs[i].isNewSurah)) {
+                    val item = ayahs[i]
                     var text = item.text.trim()
-                    // If Surah > 1 and starts with Basmala, strip Basmala from verse 1 text since banner displayed it
                     if (item.surah != 1 && item.ayah == 1 && text.startsWith("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")) {
                         text = text.removePrefix("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ").trim()
                     }
@@ -535,12 +527,30 @@ private fun RenderMushafPageContent(
                         append(toArabicDigits(item.ayah))
                         append("﴾ ")
                     }
+                    isFirstInBlock = false
+                    i++
                 }
+            }
+            result.add(MushafPageBlock(header, showBasmala, formatted))
+        }
+        result
+    }
+
+    blocks.forEach { block ->
+        if (block.surahHeader != null) {
+            SurahHeaderBanner(
+                surah = block.surahHeader,
+                isIvoryMode = isIvoryMode
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            if (block.showBasmala) {
+                BasmalaBanner(isIvoryMode = isIvoryMode)
+                Spacer(modifier = Modifier.height(10.dp))
             }
         }
 
         Text(
-            text = formattedText,
+            text = block.formattedText,
             style = TextStyle(
                 fontFamily = AmiriQuranFont,
                 fontWeight = FontWeight.Normal,

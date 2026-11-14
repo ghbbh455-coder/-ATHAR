@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
@@ -82,13 +81,13 @@ import com.example.ui.theme.AtharGlassButtonBg
 import com.example.ui.theme.AtharGlassButtonBorder
 import com.example.ui.theme.AtharGlassDarkGreen
 import com.example.ui.theme.AtharGlassSecondary
-import com.example.ui.theme.AtharGlassShadow
 import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharGoldDark
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharIvoryDark
 import com.example.ui.theme.AtharTheme
 import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.rememberLiquidGlassBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -269,7 +268,17 @@ fun FloatingOverlayCard(
                 animationSpec = tween(durationMillis = 150)
             )
         ) {
-            // Liquid Glass Card Container
+            val glassBrush = rememberLiquidGlassBrush()
+            val borderBrush = remember {
+                Brush.linearGradient(
+                    listOf(
+                        AtharGlassBorderHighlight,
+                        AtharGlassBorder,
+                        AtharGlassBorderHighlight
+                    )
+                )
+            }
+            // Liquid Glass Card Container (no live blur or heavy shadow for smooth 120fps animations)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -281,12 +290,6 @@ fun FloatingOverlayCard(
                             OverlayPosition.BOTTOM -> 48.dp
                         }
                     )
-                    .shadow(
-                        elevation = 20.dp,
-                        shape = RoundedCornerShape(28.dp),
-                        spotColor = AtharGlassShadow,
-                        ambientColor = AtharGlassShadow
-                    )
                     .clip(RoundedCornerShape(28.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -294,23 +297,10 @@ fun FloatingOverlayCard(
                     ) {
                         // Consume click inside card so touching scripture/card does not dismiss the popup
                     }
-                    .background(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                AtharGlassDarkGreen,
-                                AtharGlassSecondary
-                            )
-                        )
-                    )
+                    .background(brush = glassBrush)
                     .border(
                         width = 1.2.dp,
-                        brush = Brush.linearGradient(
-                            listOf(
-                                AtharGlassBorderHighlight,
-                                AtharGlassBorder,
-                                AtharGlassBorderHighlight
-                            )
-                        ),
+                        brush = borderBrush,
                         shape = RoundedCornerShape(28.dp)
                     )
                     .padding(horizontal = 20.dp, vertical = 18.dp),
