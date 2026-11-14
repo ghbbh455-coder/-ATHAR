@@ -74,17 +74,19 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -106,6 +108,8 @@ import com.example.ui.theme.AtharGoldDark
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharIvoryDark
 import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.LiquidGlassDefaults
+import com.example.ui.theme.liquidGlass
 import com.example.ui.viewmodel.AtharViewModel
 import kotlinx.coroutines.launch
 
@@ -160,9 +164,11 @@ fun QuranPagerScreen(
                 .background(pageBgColor)
                 .testTag("quran_pager_screen")
         ) {
-            // Main 604-page Horizontal Pager
+            // Main 604-page Horizontal Pager with pre-warmed adjacent page
             HorizontalPager(
                 state = pagerState,
+                beyondViewportPageCount = 1,
+                key = { it },
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable(
@@ -514,17 +520,22 @@ private fun RenderMushafPageContent(
             i++
         }
 
-        val formattedText = buildString {
-            blockAyahs.forEach { item ->
-                var text = item.text.trim()
-                // If Surah > 1 and starts with Basmala, strip Basmala from verse 1 text since banner displayed it
-                if (item.surah != 1 && item.ayah == 1 && text.startsWith("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")) {
-                    text = text.removePrefix("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ").trim()
+        val verseMarkerColor = if (isIvoryMode) AtharGoldDark else AtharGold
+        val formattedText = remember(blockAyahs, verseMarkerColor) {
+            buildAnnotatedString {
+                blockAyahs.forEach { item ->
+                    var text = item.text.trim()
+                    // If Surah > 1 and starts with Basmala, strip Basmala from verse 1 text since banner displayed it
+                    if (item.surah != 1 && item.ayah == 1 && text.startsWith("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ")) {
+                        text = text.removePrefix("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ").trim()
+                    }
+                    append(text)
+                    withStyle(SpanStyle(color = verseMarkerColor, fontWeight = FontWeight.Bold)) {
+                        append(" ﴿")
+                        append(toArabicDigits(item.ayah))
+                        append("﴾ ")
+                    }
                 }
-                append(text)
-                append(" ﴿")
-                append(toArabicDigits(item.ayah))
-                append("﴾ ")
             }
         }
 
@@ -643,11 +654,11 @@ private fun MushafTopBar(
     val hasBookmarkHere = currentPage == bookmarkPage
 
     Surface(
-        color = Color(0xF0102D25),
-        border = BorderStroke(1.dp, AtharGlassBorder),
+        color = Color.Transparent,
         shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
-        shadowElevation = 8.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
     ) {
         Row(
             modifier = Modifier
@@ -737,11 +748,11 @@ private fun MushafBottomBar(
     onSliderChanged: (Int) -> Unit
 ) {
     Surface(
-        color = Color(0xF2102D25),
-        border = BorderStroke(1.dp, AtharGlassBorder),
+        color = Color.Transparent,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        shadowElevation = 12.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
     ) {
         Column(
             modifier = Modifier
@@ -903,13 +914,12 @@ private fun SurahIndexPickerDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = AtharDeepGreen),
-            border = BorderStroke(1.2.dp, AtharGlassBorder),
+            shape = LiquidGlassDefaults.CardShape,
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 580.dp)
-                .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = AtharGlassShadow)
+                .liquidGlass(shape = LiquidGlassDefaults.CardShape)
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Row(
@@ -964,7 +974,11 @@ private fun SurahIndexPickerDialog(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filtered, key = { it.number }) { surah ->
+                    items(
+                        items = filtered,
+                        key = { it.number },
+                        contentType = { "surah_picker_item" }
+                    ) { surah ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = AtharGlassSecondary,
@@ -1059,13 +1073,12 @@ private fun JuzIndexPickerDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = AtharDeepGreen),
-            border = BorderStroke(1.2.dp, AtharGlassBorder),
+            shape = LiquidGlassDefaults.CardShape,
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 560.dp)
-                .shadow(16.dp, RoundedCornerShape(24.dp), spotColor = AtharGlassShadow)
+                .liquidGlass(shape = LiquidGlassDefaults.CardShape)
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 Row(
@@ -1093,7 +1106,11 @@ private fun JuzIndexPickerDialog(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(QuranSurahCatalog.juzs, key = { it.number }) { juz ->
+                    items(
+                        items = QuranSurahCatalog.juzs,
+                        key = { it.number },
+                        contentType = { "juz_picker_item" }
+                    ) { juz ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = AtharGlassSecondary,
@@ -1191,12 +1208,11 @@ private fun JumpToPageDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = AtharDeepGreen),
-            border = BorderStroke(1.2.dp, AtharGlassBorder),
+            shape = LiquidGlassDefaults.CardShape,
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(16.dp, RoundedCornerShape(22.dp))
+                .liquidGlass(shape = LiquidGlassDefaults.CardShape)
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),

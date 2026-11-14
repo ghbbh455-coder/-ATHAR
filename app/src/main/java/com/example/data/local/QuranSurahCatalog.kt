@@ -1,5 +1,8 @@
 package com.example.data.local
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class SurahMetadata(
     val number: Int,
     val arabicName: String,
@@ -9,6 +12,7 @@ data class SurahMetadata(
     val juzNumber: Int = 1
 )
 
+@Immutable
 data class JuzMetadata(
     val number: Int,
     val arabicName: String,

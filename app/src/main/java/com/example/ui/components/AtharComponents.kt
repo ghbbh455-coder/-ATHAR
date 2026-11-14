@@ -53,9 +53,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AmiriQuranFont
+import com.example.ui.theme.AtharDarkBg
 import com.example.ui.theme.AtharGold
 import com.example.ui.theme.AtharGoldDark
 import com.example.ui.theme.AtharSecondaryGreen
+import com.example.ui.theme.LiquidGlassDefaults
+import com.example.ui.theme.rememberLiquidGlassBrush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,7 +124,15 @@ fun AtharCard(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val cardBg = MaterialTheme.colorScheme.surfaceVariant
+    val isDarkSurface = MaterialTheme.colorScheme.background == AtharDarkBg
+    val cardBrush = if (isDarkSurface) {
+        rememberLiquidGlassBrush()
+    } else {
+        rememberLiquidGlassBrush(
+            topColor = Color(0xD9FFFFFF),
+            bottomColor = Color(0xD9F5F0E6)
+        )
+    }
     val favTint by animateColorAsState(
         targetValue = if (isFavorite) AtharGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         label = "fav_color"
@@ -138,14 +149,15 @@ fun AtharCard(
             .wrapContentHeight()
             .testTag("athar_card_$title"),
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = BorderStroke(1.2.dp, com.example.ui.theme.AtharGlassBorderBrush),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = LiquidGlassDefaults.ThinGoldBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
+                .background(brush = cardBrush)
                 .padding(20.dp)
         ) {
             // Header Row: Category Badge + Title

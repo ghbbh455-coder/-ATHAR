@@ -75,6 +75,7 @@ import com.example.R
 import com.example.data.model.AtharFontSize
 import com.example.data.model.AtharThemeMode
 import com.example.data.model.OverlayPosition
+import com.example.overlay.DevicePermissionHelper
 import com.example.overlay.UnlockOverlayManager
 import com.example.ui.components.AtharTopBar
 import com.example.ui.theme.AmiriQuranFont
@@ -137,8 +138,8 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     modifier = Modifier.testTag("overlay_settings_card")
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -364,20 +365,65 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        OutlinedButton(
-                            onClick = { onNavigateToPermissions() },
+                        // Button 1: Smart OEM Background & Autostart Settings (Infinix / Tecno / XOS / Android)
+                        Button(
+                            onClick = { DevicePermissionHelper.openOemBackgroundSettings(context) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
+                                .height(50.dp)
+                                .testTag("btn_oem_background_settings"),
                             shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.2.dp, AtharGold),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AtharGold)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AtharGold,
+                                contentColor = AtharDeepGreen
+                            )
                         ) {
                             Icon(imageVector = Icons.Filled.Security, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "إعدادات الأذونات الشاملة وتوفير البطارية",
+                                text = "حماية الخلفية والتشغيل التلقائي (Infinix / Tecno)",
                                 style = MaterialTheme.typography.labelLarge.copy(
+                                    fontFamily = CairoFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Clear instructions for Infinix & Tecno users
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x28D6BC82),
+                            border = BorderStroke(0.8.dp, AtharGold.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "💡 لمستخدمي إنفينيكس وتكنو (XOS / HiOS): فعّل \"التشغيل التلقائي Auto-start\" داخل مدير الهاتف، واقفل التطبيق بقفل 🔒 في قائمة التطبيقات المفتوحة لضمان عدم توقف التذكير.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = CairoFontFamily,
+                                    color = AtharGold,
+                                    fontSize = 11.sp,
+                                    lineHeight = 16.sp
+                                ),
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedButton(
+                            onClick = { onNavigateToPermissions() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, AtharGold.copy(alpha = 0.7f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AtharGold)
+                        ) {
+                            Text(
+                                text = "شاشة فحص وتفعيل الأذونات خطوة بخطوة",
+                                style = MaterialTheme.typography.labelMedium.copy(
                                     fontFamily = CairoFontFamily,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -405,8 +451,8 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -461,8 +507,8 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -517,8 +563,8 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -573,8 +619,8 @@ fun SettingsScreen(
                 Card(
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     modifier = Modifier.fillMaxWidth().testTag("fasting_reminder_settings_card")
                 ) {
                     Row(
@@ -658,29 +704,22 @@ fun SettingsScreen(
 
             // 6. Luxury Liquid Glass: Developer Contact Section (تواصل مع المطور)
             item {
+                val devGlassBrush = remember {
+                    Brush.verticalGradient(
+                        listOf(AtharGlassDarkGreen, AtharGlassSecondary)
+                    )
+                }
                 Card(
                     shape = RoundedCornerShape(26.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color.Transparent
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(
-                            elevation = 16.dp,
-                            shape = RoundedCornerShape(26.dp),
-                            spotColor = AtharGlassShadow,
-                            ambientColor = AtharGlassShadow
-                        )
                         .clip(RoundedCornerShape(26.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    AtharGlassDarkGreen,
-                                    AtharGlassSecondary
-                                )
-                            )
-                        )
+                        .background(brush = devGlassBrush)
                         .testTag("developer_contact_card")
                 ) {
                     Column(
@@ -789,8 +828,8 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier

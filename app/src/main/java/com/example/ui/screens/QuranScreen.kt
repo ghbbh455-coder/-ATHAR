@@ -321,7 +321,11 @@ fun QuranScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredVerses, key = { it.id }) { verse ->
+                items(
+                    items = filteredVerses,
+                    key = { it.id },
+                    contentType = { "quran_verse" }
+                ) { verse ->
                     val isFav = favoriteIds.contains(verse.id)
                     AtharCard(
                         categoryBadge = "${verse.surahName} (الآية ${verse.verseNumber})",
@@ -350,7 +354,7 @@ fun QuranScreen(
                 }
 
                 if (filteredVerses.isEmpty()) {
-                    item {
+                    item(key = "empty_quran", contentType = "empty_notice") {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -367,7 +371,7 @@ fun QuranScreen(
                     }
                 }
 
-                item {
+                item(key = "quran_footer", contentType = "footer") {
                     Text(
                         text = "نصوص القرآن الكريم مضبوطة وفق تدقيق ورسم المصحف العثماني",
                         style = MaterialTheme.typography.bodySmall.copy(
@@ -388,7 +392,11 @@ fun QuranScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filteredSurahs, key = { it.number }) { surah ->
+                items(
+                    items = filteredSurahs,
+                    key = { it.number },
+                    contentType = { "surah_index_item" }
+                ) { surah ->
                     SurahIndexItemCard(
                         surah = surah,
                         onClick = {
@@ -398,7 +406,7 @@ fun QuranScreen(
                     )
                 }
 
-                item {
+                item(key = "surah_footer", contentType = "footer") {
                     Text(
                         text = "نصوص القرآن الكريم مضبوطة وفق رسم المصحف العثماني الشريف",
                         style = MaterialTheme.typography.bodySmall.copy(

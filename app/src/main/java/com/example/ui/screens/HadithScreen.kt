@@ -170,7 +170,11 @@ fun HadithScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(filteredHadiths, key = { it.id }) { hadith ->
+            items(
+                items = filteredHadiths,
+                key = { it.id },
+                contentType = { "hadith_card" }
+            ) { hadith ->
                 val isFav = favoriteIds.contains(hadith.id)
                 AtharCard(
                     categoryBadge = "${hadith.collectionName} - رقم ${hadith.hadithNumber}",
@@ -199,7 +203,7 @@ fun HadithScreen(
             }
 
             if (filteredHadiths.isEmpty()) {
-                item {
+                item(key = "empty_hadith", contentType = "empty_notice") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

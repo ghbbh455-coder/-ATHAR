@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AtharPreferences
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -52,6 +54,7 @@ sealed class AtharDestination(val route: String, val titleArabic: String) {
     object Settings : AtharDestination("settings", "الإعدادات")
 }
 
+@Immutable
 data class UnifiedContentItem(
     val id: String,
     val type: ContentType,
@@ -199,7 +202,8 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
             }
             matchesFilter && matchesQuery
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Favorites mapped to full UI display items offline
     val favoriteDisplayItems: StateFlow<List<FavoriteItem>> = combine(
@@ -259,11 +263,13 @@ class AtharViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (filter == null) list else list.filter { it.type == filter }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteIdsSet: StateFlow<Set<String>> = rawFavorites.combine(prefs.favoriteIds) { dbFavs, prefFavs ->
         dbFavs.map { it.contentId }.toSet() + prefFavs
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val themeMode: StateFlow<AtharThemeMode> = prefs.themeMode
     val fontSize: StateFlow<AtharFontSize> = prefs.fontSize

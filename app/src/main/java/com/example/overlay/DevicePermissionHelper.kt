@@ -96,87 +96,96 @@ object DevicePermissionHelper {
         }
     }
 
-    fun openAutostartSettings(context: Context) {
-        val intents = listOf(
-            // Xiaomi / Redmi / POCO MIUI & HyperOS
+    fun openOemBackgroundSettings(context: Context) {
+        // 1. Infinix / Tecno (Transsion XOS / HiOS PhoneMaster)
+        val transsionIntents = listOf(
             Intent().setComponent(
                 ComponentName(
-                    "com.miui.securitycenter",
-                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
-                )
-            ),
-            // Huawei
-            Intent().setComponent(
-                ComponentName(
-                    "com.huawei.systemmanager",
-                    "com.huawei.systemmanager.optimize.process.ProtectActivity"
+                    "com.transsion.phonemaster",
+                    "com.cyin.himgr.autostart.AutoStartActivity"
                 )
             ),
             Intent().setComponent(
                 ComponentName(
-                    "com.huawei.systemmanager",
-                    "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
-                )
-            ),
-            // Oppo / Realme ColorOS
-            Intent().setComponent(
-                ComponentName(
-                    "com.coloros.safecenter",
-                    "com.coloros.safecenter.permission.startup.StartupAppListActivity"
+                    "com.transsion.phonemaster",
+                    "com.cyin.himgr.widget.activity.MainActivity"
                 )
             ),
             Intent().setComponent(
                 ComponentName(
-                    "com.coloros.safecenter",
-                    "com.coloros.safecenter.startupapp.StartupAppListActivity"
-                )
-            ),
-            Intent().setComponent(
-                ComponentName(
-                    "com.oppo.safe",
-                    "com.oppo.safe.permission.startup.StartupAppListActivity"
-                )
-            ),
-            // Vivo FuntouchOS
-            Intent().setComponent(
-                ComponentName(
-                    "com.vivo.permissionmanager",
-                    "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"
-                )
-            ),
-            Intent().setComponent(
-                ComponentName(
-                    "com.iqoo.secure",
-                    "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"
-                )
-            ),
-            // Samsung Device Care / Battery
-            Intent().setComponent(
-                ComponentName(
-                    "com.samsung.android.lool",
-                    "com.samsung.android.sm.ui.battery.BatteryActivity"
-                )
-            ),
-            Intent().setComponent(
-                ComponentName(
-                    "com.samsung.android.sm",
-                    "com.samsung.android.sm.ui.battery.BatteryActivity"
+                    "com.transsion.phonemaster",
+                    "com.cyin.himgr.MainActivity"
                 )
             )
         )
 
-        for (intent in intents) {
+        for (intent in transsionIntents) {
             try {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
                 return
             } catch (_: Exception) {
-                // Continue to next candidate
+                // Try next Transsion component
             }
         }
 
-        // Generic fallback to application settings
-        openAppDetails(context)
+        // Other OEM AutoStart managers if available (Xiaomi, Oppo, Vivo, Huawei, Samsung)
+        val otherOemIntents = listOf(
+            Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+            Intent().setComponent(ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+            Intent().setComponent(ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")),
+            Intent().setComponent(ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")),
+            Intent().setComponent(ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"))
+        )
+        for (intent in otherOemIntents) {
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {
+                // Try next OEM intent
+            }
+        }
+
+        // 2. Battery optimization exemption directly
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val batteryIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(batteryIntent)
+                return
+            } catch (_: Exception) {
+                try {
+                    val genericBatteryIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(genericBatteryIntent)
+                    return
+                } catch (_: Exception) {
+                    // Fallback to app details
+                }
+            }
+        }
+
+        // 3. Application details settings
+        try {
+            val detailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(detailsIntent)
+        } catch (_: Exception) {
+            val generalIntent = Intent(Settings.ACTION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(generalIntent)
+        }
+    }
+
+    fun openAutostartSettings(context: Context) {
+        openOemBackgroundSettings(context)
     }
 
     fun openXiaomiPopUpPermission(context: Context) {
@@ -240,9 +249,17 @@ object DevicePermissionHelper {
         return brand.contains("oppo") || brand.contains("vivo") || brand.contains("realme") || brand.contains("oneplus")
     }
 
+    fun isInfinixOrTecno(): Boolean {
+        val brand = Build.MANUFACTURER?.lowercase() ?: ""
+        val brandModel = (Build.BRAND + " " + Build.MODEL).lowercase()
+        return brand.contains("infinix") || brand.contains("tecno") || brand.contains("transsion") || brand.contains("itel") ||
+                brandModel.contains("infinix") || brandModel.contains("tecno") || brandModel.contains("transsion")
+    }
+
     fun getDeviceBrandDisplayName(): String {
         val brand = Build.MANUFACTURER?.lowercase() ?: ""
         return when {
+            isInfinixOrTecno() -> "Infinix / Tecno (XOS / HiOS)"
             isXiaomi() -> "Xiaomi / Redmi / POCO"
             isSamsung() -> "Samsung Galaxy"
             isOppoOrVivo() -> "Oppo / Vivo / Realme"

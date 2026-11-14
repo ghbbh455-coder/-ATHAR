@@ -151,7 +151,11 @@ fun FavoritesScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(favoritesList, key = { it.id }) { item ->
+                items(
+                    items = favoritesList,
+                    key = { it.id },
+                    contentType = { it.type }
+                ) { item ->
                     AtharCard(
                         categoryBadge = item.type.titleArabic,
                         title = item.title,

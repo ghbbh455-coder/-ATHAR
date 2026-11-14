@@ -1,5 +1,7 @@
 package com.example.data.model
 
+import androidx.compose.runtime.Immutable
+
 enum class ContentType(val titleArabic: String) {
     QURAN("القرآن الكريم"),
     HADITH("الحديث النبوي"),
@@ -7,6 +9,7 @@ enum class ContentType(val titleArabic: String) {
     DUA("الأدعية")
 }
 
+@Immutable
 data class QuranVerse(
     val id: String,
     val surahName: String,
@@ -17,6 +20,7 @@ data class QuranVerse(
     val tafsirSnippet: String
 )
 
+@Immutable
 data class HadithItem(
     val id: String,
     val title: String,
@@ -50,6 +54,7 @@ enum class DhikrCategory(val id: String, val title: String) {
     JAWAMI("jawami", "جوامع الاستغفار والتسبيح") // Backward compatible
 }
 
+@Immutable
 data class DhikrItem(
     val id: String,
     val category: DhikrCategory,
@@ -60,6 +65,7 @@ data class DhikrItem(
     val reference: String
 )
 
+@Immutable
 data class FavoriteItem(
     val id: String,
     val type: ContentType,

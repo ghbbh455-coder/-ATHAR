@@ -1,5 +1,6 @@
 package com.example.data.local.db
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
@@ -26,6 +27,7 @@ class DatabaseConverters {
  * 1. QuranVerse Entity
  * Follows Tanzil source attribution standards and literal Uthmani script preservation.
  */
+@Immutable
 @Entity(tableName = "quran_verses")
 data class QuranVerseEntity(
     @PrimaryKey
@@ -47,6 +49,7 @@ data class QuranVerseEntity(
  * 2. Hadith Entity
  * Separates authentic prophetic text from scholarly grading, preserving collection, book, chapter and reviewer audit.
  */
+@Immutable
 @Entity(tableName = "hadiths")
 data class HadithEntity(
     @PrimaryKey
@@ -70,6 +73,7 @@ data class HadithEntity(
  * 3. Dhikr Entity
  * Fortress of the Muslim (حصن المسلم) and verified prophetic supplications with exact references.
  */
+@Immutable
 @Entity(tableName = "adhkar")
 data class DhikrEntity(
     @PrimaryKey
@@ -90,6 +94,7 @@ data class DhikrEntity(
  * 4. Favorite Entity
  * Stores user saved contents with timestamps locally.
  */
+@Immutable
 @Entity(tableName = "favorites")
 data class FavoriteEntity(
     @PrimaryKey
@@ -103,6 +108,7 @@ data class FavoriteEntity(
  * 5. ContentSettings Entity
  * Local offline controls for content display frequencies and enablement.
  */
+@Immutable
 @Entity(tableName = "content_settings")
 data class ContentSettingsEntity(
     @PrimaryKey

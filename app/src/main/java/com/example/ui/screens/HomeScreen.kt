@@ -141,7 +141,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         // Hero Header Section with Liquid Glass & Header Shortcuts (Favorites & Settings)
-        item {
+        item(key = "hero_header", contentType = "hero") {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -307,14 +307,14 @@ fun HomeScreen(
         }
 
         // Section: Daily Fajr "Jabr Al-Khatir" Pinned Glass Card (بشارة فجرية 🌿 | جبر خاطر)
-        item {
+        item(key = "jabr_khatir_card", contentType = "jabr_card") {
             Card(
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = AtharGlassDarkGreen
                 ),
-                border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -439,7 +439,7 @@ fun HomeScreen(
 
         // Section: Seasonal Fasting Eve Reminder (if active)
         if (fastingOccasion != null) {
-            item {
+            item(key = "fasting_banner", contentType = "fasting_banner") {
                 FastingBannerCard(
                     occasion = fastingOccasion,
                     onCopy = { text -> viewModel.copyToClipboard(context, text) },
@@ -450,14 +450,14 @@ fun HomeScreen(
         }
 
         // Section: "بماذا تشعر الآن؟" (Interactive Mood & Spiritual Guidance)
-        item {
+        item(key = "mood_selector", contentType = "mood_card") {
             MoodSelectorCard(
                 onSelectMood = { activeMood = it }
             )
         }
 
         // Section: Daily Spiritual Impact Card
-        item {
+        item(key = "daily_impact", contentType = "impact_card") {
             DailyImpactCard(
                 unlockCount = dailyUnlockCount,
                 tasbeehCount = dailyTasbeehCount
@@ -465,14 +465,14 @@ fun HomeScreen(
         }
 
         // Section: Floating Popup Status & Quick Toggle Card
-        item {
+        item(key = "overlay_status_card", contentType = "status_card") {
             Card(
                 shape = RoundedCornerShape(26.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                border = BorderStroke(1.2.dp, AtharGlassBorderBrush),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                border = BorderStroke(1.dp, Color(0x4DD6BC82)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -536,7 +536,7 @@ fun HomeScreen(
         }
 
         // Section: Dedicated Faith Content Area
-        item {
+        item(key = "daily_faith_content", contentType = "faith_content") {
             Spacer(modifier = Modifier.height(14.dp))
             Column(
                 modifier = Modifier
@@ -738,7 +738,7 @@ fun HomeScreen(
         }
 
         // Section: Instant Dhikr & Tasbih Tap Box
-        item {
+        item(key = "instant_tasbih", contentType = "tasbih_box") {
             Spacer(modifier = Modifier.height(18.dp))
             Card(
                 modifier = Modifier
@@ -835,7 +835,7 @@ fun HomeScreen(
         }
 
         // Section: Main Navigation Grid (with wrapContentHeight to prevent text clipping)
-        item {
+        item(key = "main_nav_grid", contentType = "nav_grid") {
             Spacer(modifier = Modifier.height(22.dp))
             Column(
                 modifier = Modifier

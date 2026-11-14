@@ -51,12 +51,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,21 +77,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.local.AtharPreferences
+import com.example.data.local.TasbeehDataStore
 import com.example.ui.screens.toArabicDigits
 import com.example.ui.theme.AmiriQuranFont
 import com.example.ui.theme.AtharDeepGreen
 import com.example.ui.theme.AtharGlassBorder
-import com.example.ui.theme.AtharGlassBorderHighlight
 import com.example.ui.theme.AtharGlassDarkGreen
 import com.example.ui.theme.AtharGlassSecondary
-import com.example.ui.theme.AtharGlassShadow
 import com.example.ui.theme.AtharGold
-import com.example.ui.theme.AtharGoldDark
 import com.example.ui.theme.AtharIvory
 import com.example.ui.theme.AtharIvoryDark
 import com.example.ui.theme.CairoFontFamily
+import com.example.ui.theme.LiquidGlassDefaults
+import com.example.ui.theme.liquidGlass
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+@Immutable
 data class TasbeehDhikr(
     val key: String,
     val arabicText: String,
@@ -117,6 +122,7 @@ fun FloatingTasbeehBubble(
 ) {
     val context = LocalContext.current
     val prefs = remember { AtharPreferences(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     var isDialogVisible by remember { mutableStateOf(false) }
 
@@ -124,12 +130,22 @@ fun FloatingTasbeehBubble(
     var offsetX by remember { mutableFloatStateOf(16f) }
     var offsetY by remember { mutableFloatStateOf(420f) }
 
-    // Selected Dhikr index
+    // Selected Dhikr index (backed by DataStore)
     var selectedIndex by remember { mutableIntStateOf(prefs.getSelectedTasbeehIndex()) }
     val currentDhikr = defaultTasbeehList[selectedIndex.coerceIn(0, defaultTasbeehList.lastIndex)]
 
-    // Counter for current dhikr
+    // Counter for current dhikr (backed by DataStore)
     var count by remember { mutableIntStateOf(prefs.getFloatingTasbeehCount(currentDhikr.key)) }
+
+    LaunchedEffect(Unit) {
+        val dsIndex = TasbeehDataStore.selectedIndexFlow(context).first()
+        selectedIndex = dsIndex.coerceIn(0, defaultTasbeehList.lastIndex)
+        val key = defaultTasbeehList[selectedIndex].key
+        val dsCount = TasbeehDataStore.countFlow(context, key).first()
+        if (dsCount > 0 || count == 0) {
+            count = dsCount
+        }
+    }
 
     // Tap pulse animation
     var isPressed by remember { mutableStateOf(false) }
@@ -173,13 +189,16 @@ fun FloatingTasbeehBubble(
         }
     }
 
-    // Increment count with haptic & auto-save
+    // Increment count with haptic & auto-save to DataStore
     fun incrementCount() {
         isPressed = true
         val newCount = count + 1
         count = newCount
         prefs.setFloatingTasbeehCount(currentDhikr.key, newCount)
         prefs.incrementDailyTasbeehCount(1)
+        coroutineScope.launch {
+            TasbeehDataStore.saveCount(context, currentDhikr.key, newCount)
+        }
 
         val isGoal = (newCount % currentDhikr.target == 0) || (newCount == 33) || (newCount == 100)
         performHaptic(isGoal)
@@ -207,8 +226,8 @@ fun FloatingTasbeehBubble(
         Surface(
             shape = CircleShape,
             color = AtharGlassDarkGreen,
-            border = BorderStroke(1.5.dp, AtharGold),
-            shadowElevation = 10.dp,
+            border = BorderStroke(1.2.dp, AtharGold),
+            shadowElevation = 0.dp,
             modifier = Modifier
                 .size(54.dp)
                 .clickable(
@@ -255,13 +274,13 @@ fun FloatingTasbeehBubble(
     if (isDialogVisible) {
         Dialog(onDismissRequest = { isDialogVisible = false }) {
             Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = AtharDeepGreen),
-                border = BorderStroke(1.2.dp, AtharGlassBorder),
+                shape = LiquidGlassDefaults.LargeCardShape,
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentHeight()
-                    .shadow(20.dp, RoundedCornerShape(28.dp), spotColor = AtharGlassShadow)
+                    .liquidGlass(shape = LiquidGlassDefaults.LargeCardShape)
             ) {
                 Column(
                     modifier = Modifier
@@ -322,7 +341,11 @@ fun FloatingTasbeehBubble(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        itemsIndexed(defaultTasbeehList) { index, item ->
+                        itemsIndexed(
+                            items = defaultTasbeehList,
+                            key = { _, item -> item.key },
+                            contentType = { _, _ -> "tasbeeh_chip" }
+                        ) { index, item ->
                             val isSelected = index == selectedIndex
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
@@ -331,7 +354,10 @@ fun FloatingTasbeehBubble(
                                 modifier = Modifier.clickable {
                                     selectedIndex = index
                                     prefs.setSelectedTasbeehIndex(index)
-                                    count = prefs.getFloatingTasbeehCount(item.key)
+                                    coroutineScope.launch {
+                                        TasbeehDataStore.saveSelectedIndex(context, index)
+                                        count = TasbeehDataStore.countFlow(context, item.key).first()
+                                    }
                                 }
                             ) {
                                 Text(
@@ -457,11 +483,17 @@ fun FloatingTasbeehBubble(
                                     onClick = {
                                         count = 0
                                         prefs.setFloatingTasbeehCount(currentDhikr.key, 0)
+                                        coroutineScope.launch {
+                                            TasbeehDataStore.saveCount(context, currentDhikr.key, 0)
+                                        }
                                         performHaptic(false)
                                     },
                                     onLongClick = {
                                         count = 0
                                         prefs.setFloatingTasbeehCount(currentDhikr.key, 0)
+                                        coroutineScope.launch {
+                                            TasbeehDataStore.saveCount(context, currentDhikr.key, 0)
+                                        }
                                         performHaptic(true)
                                     }
                                 )

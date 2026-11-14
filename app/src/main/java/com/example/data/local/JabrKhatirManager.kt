@@ -1,11 +1,13 @@
 package com.example.data.local
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+@Immutable
 data class JabrKhatirItem(
     val id: String,
     val ayahText: String,

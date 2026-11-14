@@ -3,6 +3,7 @@ package com.example.data.local
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.Immutable
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -10,6 +11,7 @@ import java.time.chrono.HijrahDate
 import java.time.temporal.ChronoField
 import java.util.Calendar
 
+@Immutable
 data class FastingOccasion(
     val id: String,
     val title: String,

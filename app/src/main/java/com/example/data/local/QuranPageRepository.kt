@@ -1,8 +1,10 @@
 package com.example.data.local
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import org.json.JSONArray
 
+@Immutable
 data class QuranPageAyah(
     val surah: Int,
     val surahName: String,
@@ -11,6 +13,7 @@ data class QuranPageAyah(
     val isNewSurah: Boolean = false
 )
 
+@Immutable
 data class QuranPage(
     val pageNumber: Int,
     val juzNumber: Int,

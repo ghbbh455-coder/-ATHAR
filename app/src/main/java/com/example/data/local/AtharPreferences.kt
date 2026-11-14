@@ -2,6 +2,7 @@ package com.example.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.Immutable
 import com.example.data.model.AtharFontSize
 import com.example.data.model.AtharThemeMode
 import com.example.data.model.ContentType
@@ -333,8 +334,8 @@ class AtharPreferences(context: Context) {
         if (last <= 0L) return true
 
         val elapsed = currentTimeMillis - last
-        // Debounce of 3 seconds only to prevent multiple callbacks during a single unlock
-        return elapsed >= 3_000L
+        // Debounce of 2 seconds only to prevent multiple callbacks during a single unlock
+        return elapsed >= 2_000L
     }
 
     private fun getTodayDateString(): String {
@@ -401,6 +402,7 @@ class AtharPreferences(context: Context) {
         prefs.edit().remove(KEY_SHOWN_OVERLAY_IDS).apply()
     }
 
+    @Immutable
     data class WidgetContent(
         val id: String,
         val type: String,

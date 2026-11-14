@@ -159,7 +159,11 @@ fun AllContentScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(unifiedItems, key = { "${it.type.name}_${it.id}" }) { item ->
+            items(
+                items = unifiedItems,
+                key = { "${it.type.name}_${it.id}" },
+                contentType = { it.type }
+            ) { item ->
                 val isFav = favoriteIds.contains(item.id)
                 AtharCard(
                     categoryBadge = item.badge,
@@ -188,7 +192,7 @@ fun AllContentScreen(
             }
 
             if (unifiedItems.isEmpty()) {
-                item {
+                item(key = "empty_all_content", contentType = "empty_notice") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -1,12 +1,14 @@
 package com.example.widget
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import com.example.data.local.AtharPreferences
 import com.example.data.local.AuthenticData
 import com.example.data.local.db.AtharDatabase
 import com.example.data.model.ContentType
 import kotlinx.coroutines.flow.firstOrNull
 
+@Immutable
 data class AtharSelectableItem(
     val id: String,
     val type: ContentType,

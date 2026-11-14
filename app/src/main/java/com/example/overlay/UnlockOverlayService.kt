@@ -1,6 +1,7 @@
 package com.example.overlay
 
-import android.app.Notification
+import android.app.AlarmManager
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,10 +13,15 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
+import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.local.AtharPreferences
+import com.example.data.local.FastingOccasion
 import com.example.data.local.FastingReminderManager
 import com.example.data.local.JabrKhatirManager
 import com.example.data.local.db.AtharDatabase
@@ -28,26 +34,53 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-import android.app.KeyguardManager
-import android.os.PowerManager
-
 class UnlockOverlayService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var isReceiverRegistered = false
+
+    private enum class PreloadedKind {
+        JABR_KHATIR,
+        FASTING,
+        CONTEXTUAL
+    }
+
+    private data class PreloadedOverlay(
+        val kind: PreloadedKind,
+        val item: OverlayContentItem,
+        val fastingOccasion: FastingOccasion? = null,
+        val preparedAtElapsed: Long = SystemClock.elapsedRealtime()
+    )
+
+    @Volatile
+    private var preloadedOverlay: PreloadedOverlay? = null
+
+    @Volatile
+    private var cachedCandidatePool: List<OverlayContentItem>? = null
+
+    @Volatile
+    private var cachedPoolFlags: String = ""
 
     private val unlockAndScreenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val ctx = context ?: return
             when (intent?.action) {
                 Intent.ACTION_USER_PRESENT -> {
+                    Log.d(TAG, "Broadcast received: ACTION_USER_PRESENT")
                     triggerUnlockReminder(ctx)
                 }
                 Intent.ACTION_SCREEN_ON -> {
+                    // Briefly wake CPU for 1 second to handle unlock or preload immediately
+                    acquireBriefWakeLock(ctx, 1000L)
                     val keyguardManager = ctx.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-                    // Fallback for phones without lockscreen / PIN: if screen turned on and is NOT locked, trigger
                     if (keyguardManager != null && !keyguardManager.isKeyguardLocked) {
+                        // Device has no lock screen / PIN: display immediately without waiting
+                        Log.d(TAG, "Broadcast received: ACTION_SCREEN_ON (keyguard unlocked) -> triggering")
                         triggerUnlockReminder(ctx)
+                    } else {
+                        // Screen is still on lockscreen: preload next item in background for 0ms display upon unlock
+                        Log.d(TAG, "Broadcast received: ACTION_SCREEN_ON (keyguard locked) -> preloading item")
+                        preloadNextOverlay(ctx)
                     }
                 }
             }
@@ -56,9 +89,15 @@ class UnlockOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "UnlockOverlayService onCreate")
         createNotificationChannel()
         startAsForeground()
         registerUnlockReceiver()
+        ServiceWatchdogWorker.scheduleWatchdog(this)
+        // Warm up candidate pool on background thread
+        serviceScope.launch {
+            preloadNextOverlay(applicationContext)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,8 +114,14 @@ class UnlockOverlayService : Service() {
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_SCREEN_ON)
             }
-            registerReceiver(unlockAndScreenReceiver, filter)
+            ContextCompat.registerReceiver(
+                this,
+                unlockAndScreenReceiver,
+                filter,
+                ContextCompat.RECEIVER_EXPORTED
+            )
             isReceiverRegistered = true
+            Log.d(TAG, "Dynamic unlockAndScreenReceiver registered with RECEIVER_EXPORTED")
         }
     }
 
@@ -85,181 +130,253 @@ class UnlockOverlayService : Service() {
             try {
                 unregisterReceiver(unlockAndScreenReceiver)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Error unregistering receiver", e)
             }
             isReceiverRegistered = false
         }
     }
 
-    private fun triggerUnlockReminder(context: Context) {
-        // Prevent stacking two overlay windows on top of each other
-        if (UnlockOverlayManager.isOverlayShowing()) {
-            return
-        }
-
+    private fun acquireBriefWakeLock(context: Context, timeoutMs: Long = 1000L) {
         try {
-            // Briefly acquire partial wakelock (3s) to ensure CPU does not sleep during overlay launch
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             val wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "athar:unlock_wakelock")
-            wakeLock?.acquire(3000L)
+            wakeLock?.acquire(timeoutMs)
         } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        handleUserUnlock(context)
-        serviceScope.launch {
-            com.example.widget.AtharGlanceWidget.updateWidget(context)
+            Log.e(TAG, "Error acquiring WakeLock", e)
         }
     }
 
-    private fun handleUserUnlock(context: Context) {
+    private fun preloadNextOverlay(context: Context) {
         val prefs = AtharPreferences(context)
-        if (!prefs.canShowOverlayNow()) {
-            return
-        }
-
-        if (!UnlockOverlayManager.canDrawOverlays(context)) {
+        if (!prefs.overlayEnabled.value || !UnlockOverlayManager.canDrawOverlays(context)) {
             return
         }
 
         serviceScope.launch {
             try {
-                val currentPosition = prefs.overlayPosition.value
-
-                // 1. First Unlock of the Day after Fajr (04:00 AM+): Exclusively show "Jabr Al-Khatir" message
-                if (JabrKhatirManager.shouldShowFajrJabrKhatir(context)) {
-                    val jabr = JabrKhatirManager.getTodayJabrKhatir()
-                    val jabrItem = OverlayContentItem(
-                        id = "jabr_${jabr.id}",
-                        contentType = ContentType.QURAN,
-                        badgeText = "بشارة فجرية 🌿 | جبر خاطر",
-                        mainText = jabr.ayahText,
-                        referenceText = jabr.surahAndVerse,
-                        topic = "جبر الخواطر والسكينة",
-                        benefitOrTafsir = jabr.reflection
-                    )
-
-                    withContext(Dispatchers.Main) {
-                        UnlockOverlayManager.showOverlay(
-                            context = context,
-                            item = jabrItem,
-                            position = currentPosition
-                        )
-                    }
-
-                    JabrKhatirManager.markJabrKhatirShownToday(context)
-                    prefs.recordOverlayShown()
-                    return@launch
+                val prepared = prepareNextOverlayItem(context, prefs)
+                if (prepared != null) {
+                    preloadedOverlay = prepared
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error preloading overlay", e)
+            }
+        }
+    }
 
-                // 2. Fasting Eve Reminder (eve of Monday, Thursday, Ayyam al-Beed, Arafah, Ashura)
-                if (FastingReminderManager.shouldShowFastingOverlay(context)) {
-                    val fasting = FastingReminderManager.getActiveFastingOccasion(context)
-                    if (fasting != null) {
-                        val fastingItem = OverlayContentItem(
-                            id = fasting.id,
-                            contentType = ContentType.HADITH,
-                            badgeText = fasting.title,
-                            mainText = fasting.hadithText,
-                            referenceText = fasting.source,
-                            topic = "صيام التطوع (${fasting.occasionName})",
-                            benefitOrTafsir = "فضل هذا اليوم: ${fasting.virtue}\n🌙 لا تنسَ تبييت النية والسحور المبارك"
-                        )
+    /**
+     * Handles unlock event with 2000ms in-memory debounce.
+     * Uses preloaded item if available for 0ms instant display, and never drops an unlock event
+     * even if an old overlay was still attached (UnlockOverlayManager replaces it cleanly).
+     */
+    fun triggerUnlockReminder(context: Context) {
+        val nowElapsed = SystemClock.elapsedRealtime()
+        if (nowElapsed - lastTriggerTimestamp < DEBOUNCE_TIME_MS) {
+            Log.d(TAG, "Debounce active: ignoring duplicate unlock (${nowElapsed - lastTriggerTimestamp}ms < ${DEBOUNCE_TIME_MS}ms)")
+            return
+        }
+        lastTriggerTimestamp = nowElapsed
 
-                        withContext(Dispatchers.Main) {
-                            UnlockOverlayManager.showOverlay(
-                                context = context,
-                                item = fastingItem,
-                                position = currentPosition
-                            )
-                        }
+        acquireBriefWakeLock(context, 1000L)
+        handleUserUnlock(context)
+    }
 
-                        FastingReminderManager.markFastingOverlayShown(context, fasting)
-                        prefs.recordOverlayShown()
-                        return@launch
-                    }
+    private fun handleUserUnlock(context: Context) {
+        val prefs = AtharPreferences(context)
+        if (!prefs.overlayEnabled.value) {
+            Log.d(TAG, "Overlay disabled in preferences; skipping")
+            return
+        }
+
+        if (!UnlockOverlayManager.canDrawOverlays(context)) {
+            Log.w(TAG, "Cannot draw overlays: permission missing")
+            return
+        }
+
+        val currentPosition = prefs.overlayPosition.value
+        val cached = preloadedOverlay
+        val isFreshCache = cached != null &&
+                (SystemClock.elapsedRealtime() - cached.preparedAtElapsed) < PRELOAD_TTL_MS
+
+        if (isFreshCache && cached != null) {
+            // Consume immediately for 0ms latency!
+            preloadedOverlay = null
+            UnlockOverlayManager.showOverlay(
+                context = context,
+                item = cached.item,
+                position = currentPosition
+            )
+            serviceScope.launch {
+                commitOverlayDisplay(context, prefs, cached)
+                try {
+                    com.example.widget.AtharGlanceWidget.updateWidget(context)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating widget", e)
                 }
+            }
+            return
+        }
 
-                val db = AtharDatabase.getDatabase(context)
-                val approvedVerses = db.quranDao().getApprovedVerses().first()
-                val approvedHadiths = db.hadithDao().getApprovedHadiths().first()
-                val approvedDhikr = db.dhikrDao().getApprovedDhikr().first()
-
-                val showQuran = prefs.showQuranInOverlay.value
-                val showHadith = prefs.showHadithInOverlay.value
-                val showDhikr = prefs.showDhikrInOverlay.value
-                val showDua = prefs.showDuaInOverlay.value
-
-                // Create a pool of approved items based on user preferences
-                val allCandidates = mutableListOf<OverlayContentItem>()
-
-                if (showQuran) {
-                    approvedVerses.forEach { verse ->
-                        allCandidates.add(
-                            OverlayContentItem(
-                                id = verse.id,
-                                contentType = ContentType.QURAN,
-                                badgeText = "سورة ${verse.surahName} (آية ${verse.verseNumber})",
-                                mainText = verse.textUthmani,
-                                referenceText = "سورة ${verse.surahName}: ${verse.verseNumber}",
-                                topic = verse.topic,
-                                benefitOrTafsir = verse.tafsirSnippet
-                            )
-                        )
-                    }
-                }
-
-                if (showHadith) {
-                    approvedHadiths.forEach { hadith ->
-                        allCandidates.add(
-                            OverlayContentItem(
-                                id = hadith.id,
-                                contentType = ContentType.HADITH,
-                                badgeText = hadith.collectionName,
-                                mainText = hadith.arabicText,
-                                referenceText = hadith.collectionName,
-                                topic = hadith.topic,
-                                benefitOrTafsir = hadith.benefit
-                            )
-                        )
-                    }
-                }
-
-                approvedDhikr.forEach { dhikr ->
-                    val isDuaItem = dhikr.category.contains("دعاء") || dhikr.category.contains("أدعية")
-                    if ((isDuaItem && showDua) || (!isDuaItem && showDhikr)) {
-                        allCandidates.add(
-                            OverlayContentItem(
-                                id = dhikr.id,
-                                contentType = if (isDuaItem) ContentType.DUA else ContentType.DHIKR,
-                                badgeText = dhikr.category,
-                                mainText = dhikr.arabicText,
-                                referenceText = dhikr.reference,
-                                topic = if (isDuaItem) "أدعية مأثورة" else "أذكار مأثورة",
-                                benefitOrTafsir = dhikr.virtue
-                            )
-                        )
-                    }
-                }
-
-                // 2. Contextual Content Selection (Morning, Evening, Night, Friday, etc.)
-                val chosen = ContentSelector.selectContextualContent(context, allCandidates)
-
+        // Fallback: prepare on Dispatchers.IO using in-memory candidate pool if available
+        serviceScope.launch {
+            try {
+                val prepared = prepareNextOverlayItem(context, prefs) ?: return@launch
                 withContext(Dispatchers.Main) {
                     UnlockOverlayManager.showOverlay(
                         context = context,
-                        item = chosen,
+                        item = prepared.item,
                         position = currentPosition
                     )
                 }
-
-                prefs.recordShownContentId(chosen.id)
-                prefs.recordOverlayShown()
-
+                commitOverlayDisplay(context, prefs, prepared)
+                com.example.widget.AtharGlanceWidget.updateWidget(context)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Error in handleUserUnlock", e)
             }
         }
+    }
+
+    private suspend fun prepareNextOverlayItem(
+        context: Context,
+        prefs: AtharPreferences
+    ): PreloadedOverlay? {
+        // 1. First Unlock of the Day after Fajr (04:00 AM+): Exclusively show "Jabr Al-Khatir" message
+        if (JabrKhatirManager.shouldShowFajrJabrKhatir(context)) {
+            val jabr = JabrKhatirManager.getTodayJabrKhatir()
+            val jabrItem = OverlayContentItem(
+                id = "jabr_${jabr.id}",
+                contentType = ContentType.QURAN,
+                badgeText = "بشارة فجرية 🌿 | جبر خاطر",
+                mainText = jabr.ayahText,
+                referenceText = jabr.surahAndVerse,
+                topic = "جبر الخواطر والسكينة",
+                benefitOrTafsir = jabr.reflection
+            )
+            return PreloadedOverlay(PreloadedKind.JABR_KHATIR, jabrItem)
+        }
+
+        // 2. Fasting Eve Reminder (eve of Monday, Thursday, Ayyam al-Beed, Arafah, Ashura)
+        if (FastingReminderManager.shouldShowFastingOverlay(context)) {
+            val fasting = FastingReminderManager.getActiveFastingOccasion(context)
+            if (fasting != null) {
+                val fastingItem = OverlayContentItem(
+                    id = fasting.id,
+                    contentType = ContentType.HADITH,
+                    badgeText = fasting.title,
+                    mainText = fasting.hadithText,
+                    referenceText = fasting.source,
+                    topic = "صيام التطوع (${fasting.occasionName})",
+                    benefitOrTafsir = "فضل هذا اليوم: ${fasting.virtue}\n🌙 لا تنسَ تبييت النية والسحور المبارك"
+                )
+                return PreloadedOverlay(PreloadedKind.FASTING, fastingItem, fasting)
+            }
+        }
+
+        // 3. Contextual Content Selection from cached Room pool
+        val pool = getOrLoadCandidatePool(context, prefs)
+        val chosen = ContentSelector.selectContextualContent(context, pool)
+        return PreloadedOverlay(PreloadedKind.CONTEXTUAL, chosen)
+    }
+
+    private suspend fun getOrLoadCandidatePool(
+        context: Context,
+        prefs: AtharPreferences
+    ): List<OverlayContentItem> {
+        val showQuran = prefs.showQuranInOverlay.value
+        val showHadith = prefs.showHadithInOverlay.value
+        val showDhikr = prefs.showDhikrInOverlay.value
+        val showDua = prefs.showDuaInOverlay.value
+        val flagsKey = "$showQuran-$showHadith-$showDhikr-$showDua"
+
+        val existing = cachedCandidatePool
+        if (existing != null && existing.isNotEmpty() && cachedPoolFlags == flagsKey) {
+            return existing
+        }
+
+        val db = AtharDatabase.getDatabase(context)
+        val approvedVerses = db.quranDao().getApprovedVerses().first()
+        val approvedHadiths = db.hadithDao().getApprovedHadiths().first()
+        val approvedDhikr = db.dhikrDao().getApprovedDhikr().first()
+
+        val allCandidates = ArrayList<OverlayContentItem>(
+            approvedVerses.size + approvedHadiths.size + approvedDhikr.size
+        )
+
+        if (showQuran) {
+            approvedVerses.forEach { verse ->
+                allCandidates.add(
+                    OverlayContentItem(
+                        id = verse.id,
+                        contentType = ContentType.QURAN,
+                        badgeText = "سورة ${verse.surahName} (آية ${verse.verseNumber})",
+                        mainText = verse.textUthmani,
+                        referenceText = "سورة ${verse.surahName}: ${verse.verseNumber}",
+                        topic = verse.topic,
+                        benefitOrTafsir = verse.tafsirSnippet
+                    )
+                )
+            }
+        }
+
+        if (showHadith) {
+            approvedHadiths.forEach { hadith ->
+                allCandidates.add(
+                    OverlayContentItem(
+                        id = hadith.id,
+                        contentType = ContentType.HADITH,
+                        badgeText = hadith.collectionName,
+                        mainText = hadith.arabicText,
+                        referenceText = hadith.collectionName,
+                        topic = hadith.topic,
+                        benefitOrTafsir = hadith.benefit
+                    )
+                )
+            }
+        }
+
+        approvedDhikr.forEach { dhikr ->
+            val isDuaItem = dhikr.category.contains("دعاء") || dhikr.category.contains("أدعية")
+            if ((isDuaItem && showDua) || (!isDuaItem && showDhikr)) {
+                allCandidates.add(
+                    OverlayContentItem(
+                        id = dhikr.id,
+                        contentType = if (isDuaItem) ContentType.DUA else ContentType.DHIKR,
+                        badgeText = dhikr.category,
+                        mainText = dhikr.arabicText,
+                        referenceText = dhikr.reference,
+                        topic = if (isDuaItem) "أدعية مأثورة" else "أذكار مأثورة",
+                        benefitOrTafsir = dhikr.virtue
+                    )
+                )
+            }
+        }
+
+        if (allCandidates.isNotEmpty()) {
+            cachedCandidatePool = allCandidates
+            cachedPoolFlags = flagsKey
+        }
+        return allCandidates
+    }
+
+    private fun commitOverlayDisplay(
+        context: Context,
+        prefs: AtharPreferences,
+        displayed: PreloadedOverlay
+    ) {
+        when (displayed.kind) {
+            PreloadedKind.JABR_KHATIR -> {
+                JabrKhatirManager.markJabrKhatirShownToday(context)
+            }
+            PreloadedKind.FASTING -> {
+                displayed.fastingOccasion?.let {
+                    FastingReminderManager.markFastingOverlayShown(context, it)
+                }
+            }
+            PreloadedKind.CONTEXTUAL -> {
+                prefs.recordShownContentId(displayed.item.id)
+            }
+        }
+        prefs.recordOverlayShown()
     }
 
     private fun startAsForeground() {
@@ -309,6 +426,27 @@ class UnlockOverlayService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "onTaskRemoved: scheduling service restart")
+        scheduleServiceRestart(1000L)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "onDestroy")
+        unregisterUnlockReceiver()
+        serviceScope.cancel()
+        val prefs = AtharPreferences(applicationContext)
+        if (prefs.overlayEnabled.value && UnlockOverlayManager.canDrawOverlays(applicationContext)) {
+            scheduleServiceRestart(1000L)
+        }
+    }
+
+    private fun scheduleServiceRestart(delayMillis: Long = 1000L) {
+        val prefs = AtharPreferences(applicationContext)
+        if (!prefs.overlayEnabled.value || !UnlockOverlayManager.canDrawOverlays(applicationContext)) {
+            return
+        }
+
         try {
             val restartIntent = Intent(applicationContext, UnlockOverlayService::class.java).also {
                 it.setPackage(packageName)
@@ -319,29 +457,41 @@ class UnlockOverlayService : Service() {
                 restartIntent,
                 PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
-            alarmManager?.set(
-                android.app.AlarmManager.ELAPSED_REALTIME,
-                android.os.SystemClock.elapsedRealtime() + 1500L,
-                restartPendingIntent
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            val triggerAtMillis = SystemClock.elapsedRealtime() + delayMillis
 
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterUnlockReceiver()
-        serviceScope.cancel()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager?.setExactAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME,
+                    triggerAtMillis,
+                    restartPendingIntent
+                )
+            } else {
+                alarmManager?.setExact(
+                    AlarmManager.ELAPSED_REALTIME,
+                    triggerAtMillis,
+                    restartPendingIntent
+                )
+            }
+            ServiceWatchdogWorker.scheduleWatchdog(applicationContext)
+            Log.d(TAG, "Service restart scheduled in ${delayMillis}ms")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scheduling service restart", e)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        private const val TAG = "UnlockOverlayService"
         const val EXTRA_TRIGGER_NOW = "extra_trigger_now"
         private const val CHANNEL_ID = "athar_unlock_overlay_channel"
         private const val NOTIFICATION_ID = 1001
+        private const val DEBOUNCE_TIME_MS = 2000L
+        private const val PRELOAD_TTL_MS = 120_000L
+
+        @Volatile
+        private var lastTriggerTimestamp: Long = 0L
 
         fun startService(context: Context, triggerNow: Boolean = false) {
             val intent = Intent(context, UnlockOverlayService::class.java).apply {
@@ -349,10 +499,15 @@ class UnlockOverlayService : Service() {
                     putExtra(EXTRA_TRIGGER_NOW, true)
                 }
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                ServiceWatchdogWorker.scheduleWatchdog(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start UnlockOverlayService", e)
             }
         }
 
@@ -360,6 +515,7 @@ class UnlockOverlayService : Service() {
             val intent = Intent(context, UnlockOverlayService::class.java)
             context.stopService(intent)
             UnlockOverlayManager.dismissOverlay(context)
+            ServiceWatchdogWorker.cancelWatchdog(context)
         }
     }
 }

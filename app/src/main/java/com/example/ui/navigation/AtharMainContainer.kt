@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -49,6 +50,7 @@ import com.example.ui.theme.AtharTheme
 import com.example.ui.viewmodel.AtharDestination
 import com.example.ui.viewmodel.AtharViewModel
 
+@Immutable
 data class BottomNavItem(
     val destination: AtharDestination,
     val icon: ImageVector,

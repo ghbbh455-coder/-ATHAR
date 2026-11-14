@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,6 +61,7 @@ import com.example.ui.viewmodel.AtharViewModel
 import com.example.util.ShareImageHelper
 import kotlinx.coroutines.launch
 
+@Immutable
 data class MainAdhkarTab(
     val title: String,
     val filterPredicate: (String) -> Boolean
@@ -154,7 +156,11 @@ fun AdhkarScreen(
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            itemsIndexed(mainTabs) { index, tab ->
+            itemsIndexed(
+                items = mainTabs,
+                key = { index, _ -> "main_tab_$index" },
+                contentType = { _, _ -> "main_tab" }
+            ) { index, tab ->
                 val isSelected = index == selectedMainTabIndex
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -235,7 +241,7 @@ fun AdhkarScreen(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                item {
+                item(key = "subcat_all", contentType = "subcat_chip") {
                     val isAll = selectedSubCategory == null
                     FilterChip(
                         selected = isAll,
@@ -263,7 +269,11 @@ fun AdhkarScreen(
                     )
                 }
 
-                items(availableSubCategories) { cat ->
+                items(
+                    items = availableSubCategories,
+                    key = { it },
+                    contentType = { "subcat_chip" }
+                ) { cat ->
                     val isSelected = selectedSubCategory == cat
                     FilterChip(
                         selected = isSelected,
@@ -303,7 +313,11 @@ fun AdhkarScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(filteredAdhkar, key = { it.id }) { dhikr ->
+            items(
+                items = filteredAdhkar,
+                key = { it.id },
+                contentType = { "dhikr_card" }
+            ) { dhikr ->
                 val currentCount = counters[dhikr.id] ?: 0
                 val isCompleted = currentCount >= dhikr.repetitionCount
                 val isFav = favoriteIds.contains(dhikr.id)
@@ -415,7 +429,7 @@ fun AdhkarScreen(
             }
 
             if (filteredAdhkar.isEmpty()) {
-                item {
+                item(key = "empty_adhkar", contentType = "empty_notice") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +82,7 @@ enum class SpiritualMood(
     GRATEFUL("ممتن وسعيد", "شكر وحمد واستزادة", "🌸")
 }
 
+@Immutable
 data class MoodGuidanceItem(
     val id: String,
     val badge: String,
